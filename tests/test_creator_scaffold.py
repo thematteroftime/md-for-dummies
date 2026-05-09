@@ -83,7 +83,7 @@ def test_skill_md_references_each_scaffold_file():
 def test_no_md_test1_specific_strings_leaked_into_scaffold():
     """Scaffold should NOT mention md-for-dummies-specific names (PRX, ER,
     Hertzian, etc.). If it does, distillation has a leak."""
-    forbidden = ["PRX", "Hertzian", "Ivlev", "Taichi", "MD_test1",
+    forbidden = ["PRX", "Hertzian", "Ivlev", "Taichi", "MD_test1", "md-for-dummies",
                  "ERPotential", "T0_star", "phi_target"]
     leaks = []
     for tmpl in SCAFFOLD.glob("*.tmpl"):

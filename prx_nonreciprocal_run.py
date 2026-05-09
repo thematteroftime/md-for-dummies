@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
-"""
-PRX 非互易性分子动力学全流程模拟脚本。
+"""PRX 2015 non-reciprocal Hertzian — Layer 3 adapter.
 
-流程：晶格生成 → 写入 .xyz → 生成 run2.in → 执行 MD 模拟 → 输出并绘制（物理量纲 + 无量纲）
+Pipeline: lattice gen → run.in → MD simulation → HDF5 output → manifest.
 
-单位制：reduced（m=r0=phi0=k_B=1），τ=√(m*r0²/φ0)=1
-PRX 无量纲：T*=k_B*T/φ0, t*=t/τ, φ=π*r0²*n（面积分数）
+Units:        reduced (m = r0 = phi0 = k_B = 1; τ = sqrt(m·r0²/φ0) = 1)
+Reduced map:  T* = k_B·T/φ0, t* = t/τ, φ = π·r0²·n (2D area fraction)
+Paper case:   φ=0.3, T0*=1, NVE — asymptote T ∝ t^(2/3), τ_∞ ≈ 3.1
 
-论文参数（无阻尼）：φ=0.3, T0*=1, 渐近 T∝t^(2/3), τ≈3.1
-
-运行：conda activate taichiSimu 后，在 MD_test1 下执行
-  python prx_nonreciprocal_run.py
+CLI:
+  python prx_nonreciprocal_run.py --tag <id> [--phi 0.3 --T0 1.0 --steps N ...]
 """
 import math
 import os
@@ -32,45 +30,29 @@ from toolClass import fileOperator
 from dataFiles.lattice_gen import make_prx_square2d
 
 # ---------------------------------------------------------------------------
-# PRX 参数（论文 Fig 1/2 无阻尼模拟）
-# PRX Fig 1 reduced units: m = r0 = phi0 = k_B = 1, τ = √(m·r0²/φ0) = 1
+# PRX_PARAMS — defaults for the PRX 2015 non-reciprocal Hertzian reproduction.
+# All keys are CLI-overridable (see argparse block at file end). Override any
+# value via configs/plan_*.json — these defaults are a reference only.
 #
-# Paper vs this run:
-#   item              | paper        | this run    | rationale
-#   ------------------+--------------+-------------+--------------------------
-#   N_A = N_B         | 20000        | 2000        | 4x our previous; 1/10 paper.
-#                                                    Statistics suffice for
-#                                                    asymptotic-regime detection;
-#                                                    full paper-N tractable in
-#                                                    follow-up if needed.
-#   run_steps × dt    | ~1000 τ      | 800 τ       | 200000 steps × 0.004 τ.
-#                                                    Asymptotic T*∝t*^(2/3)
-#                                                    visible by ~100 τ in paper.
-#   φ (area fraction) | 0.3          | 0.3         | unchanged
-#   T0*               | 1.0          | 1.0         | unchanged
-#   ν                 | 0 (NVE)      | 0           | unchanged
-#   dt                | 0.004 τ      | 0.004 τ     | unchanged
+# Paper Eq.(1) F kernel; reduced units (m = r0 = phi0 = k_B = 1).
+# `N_A`, `N_B` are PER-SPECIES counts; total = N_A + N_B. Paper uses 20000+20000.
 # ---------------------------------------------------------------------------
 PRX_PARAMS = {
-    "phi_target": 0.3,    # area fraction (paper Fig 1)
+    "phi_target": 0.3,    # 2D area fraction
     "T0_star": 1.0,       # reduced initial temperature
-    "N_A": 10000,         # paper uses 20000; 10000 each = 1/2 paper (Phase 1)
+    "N_A": 10000,         # per-species count; total = N_A + N_B
     "N_B": 10000,
-    "mass": 1.0,          # reduced
-    "r0": 1.0,            # reduced
-    "phi0": 1.0,          # reduced
-    "nu": 0.0,            # NVE — paper Fig 1 case
-    "dt": 0.004,          # in τ units (~0.004 τ)
-    "run_steps": 750000,  # 3000 τ — well past paper's Fig 1 plot extent (~700 τ)
-    "write_stride": 30,   # capture every 30th step → 25k frames (~0.12 τ/frame)
-    "output_format": "hdf5",  # binary chunked + LZF: ~50x faster than ASCII XYZ
+    "mass": 1.0,
+    "r0": 1.0,
+    "phi0": 1.0,
+    "nu": 0.0,            # 0 = NVE; >0 = Langevin damping (1/τ)
+    "dt": 0.004,          # in τ units
+    "run_steps": 750000,  # ~3000 τ at default dt
+    "write_stride": 30,   # frames per HDF5 flush
+    "output_format": "hdf5",
 }
-# Paper (PRX 2015 §II.D, see docs/PRX_paper_notes.md):
-#   N_total = 40000   — we run 2000 (finite-size budget; check effect post-R1)
-#   T0 = 1, φ = 0.3, ν = 0 (NVE, Fig 1 case)
-#   Asymptotic prediction: T_A/T_B → 3.1, both grow as t^(2/3).
-#   On 2026-04-30 our 800 τ run reached T_A/T_B = 2.27 (73% of 3.1) — still transient.
-#   Bumping run length to 3000 τ here per paper-faithful reproduction plan.
+# Paper anchors (PRX 2015 §II.D): asymptotic T_A/T_B → 3.1, slope_A = 2/3.
+# Reproduction reaches asymptote in ≳1000 τ at NVE; below that you'll see transient.
 
 DATA_DIR = "./dataFiles"
 OUTPUT_DIR = "./outputFiles"

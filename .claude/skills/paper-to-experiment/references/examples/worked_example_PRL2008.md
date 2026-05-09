@@ -14,7 +14,7 @@ paper_pdf: papers/MD—Ivlev_PRL_2008.pdf
 rendered_pages: papers/rendered/page_*.png
 key_equations: [Eq.(1)]
 key_figures: [Fig.1, Fig.2, Fig.4]
-legacy_data: forSimu/MD_test1/dataFiles/ER_Sim_MT12_F_direction_100000.xyz
+legacy_data: dataFiles/ER_Sim_MT12_F_direction_100000.xyz
 thesis_chapter: §4
 ```
 

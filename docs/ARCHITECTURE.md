@@ -1,4 +1,4 @@
-# MD_test1 Framework Architecture
+# md-for-dummies Architecture
 
 > 2026-05-08 — Framework reorganization spec.
 > Reading order: §1 layers → §2 phase flow → §3 contracts → §4 templates → §5 decisions → §6 migration.

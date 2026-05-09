@@ -5,7 +5,7 @@ description: Use when the user wants to reproduce a physics paper (or part of on
 
 # Paper → Experiment Skill
 
-You are designing a simulation campaign for the `MD_test1` framework. Your job is to turn a physics paper (or a focused idea derived from one) into a validated `configs/plan_<topic>.json` that `python scripts/run_experiment.py` can launch directly.
+You are designing a simulation campaign for `md-for-dummies`, a small Taichi-based MD framework. Your job is to turn a physics paper (or a focused idea derived from one) into a validated `configs/plan_<topic>.json` that `python scripts/run_experiment.py` can launch directly.
 
 **This skill is a gate, not a free-form writer.** You follow the template, the schema, and the registry. You do not invent fields. You surface ambiguity to the user before writing JSON.
 
