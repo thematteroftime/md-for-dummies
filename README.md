@@ -215,14 +215,16 @@ The skill enforces:
 
 ### What if the paper needs a force type that doesn't exist yet?
 
-The skill walks you through the 6-step extension process documented in `force_types.md` §3:
+The skill walks you through the 8-step extension process documented in `force_types.md` §4:
 
-1. Add the force class to `forceFieldClass.py` (template provided)
+1. Add the force class to `forces/<your_force>.py` (template provided) + register in `forces/__init__.py:FORCE_REGISTRY` and `tools/registry.py:_REGISTRY`
 2. Write tests
 3. Create an entry script (Layer 3 adapter, template provided)
-4. Update the platform's `_invoke_md` dispatcher
+4. Update `scripts/run_experiment.py:_invoke_md` dispatcher AND `scripts/validate_config.py:check_force_type_specific`
 5. Update the schema enum
 6. Document in the registry
+7. Add an analyzer (`tools/analyzers/<paper>.py`) producing `report.md`
+8. Add a plotter (`tools/plotters/<paper>.py`) producing `fig*.png`
 
 Each step has a template file under `.claude/skills/paper-to-experiment/templates/`.
 
@@ -243,7 +245,7 @@ The bigger case (new force type, new analyzer, new figure):
 
 | Goal | Copy template | Save as |
 |------|---------------|---------|
-| New force type | `templates/force_class.py.template` | append to `forceFieldClass.py` |
+| New force type | `templates/force_class.py.template` | save as `forces/<your_force>.py` |
 | New paper adapter | `templates/adapter_run.py.template` | `<topic>_run.py` |
 | New analyzer | `templates/analyzer.py.template` | `tools/analyzers/<topic>.py` |
 | New visualizer | `templates/visualizer.py.template` | `tools/visualizers/<topic>.py` |
@@ -346,7 +348,7 @@ md-for-dummies/
 ├── prx_nonreciprocal_run.py        Layer 3 adapter — PRX 2015
 ├── er_plasma_run.py                Layer 3 adapter — PRL 2008
 │
-├── forceFieldClass.py              Layer 1 — HertzianNonreciprocal, ERPotential, LJ
+├── forces/                         Layer 1 — one file per force class (HertzianNonreciprocal, ERPotential, LJ)
 ├── systemClass.py                  Layer 1 — MD orchestrator
 ├── atomSystemClass.py              Layer 1 — particle state
 ├── integratorClass.py              Layer 1 — BAOAB

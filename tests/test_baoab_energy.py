@@ -23,7 +23,7 @@ if cs.UNITS is None or cs.UNITS.name != "reduced":
 
 from atomSystemClass import AtomSystem
 from searchBox import searchBox
-from forceFieldClass import lennardJones
+from forces import lennardJones
 from integratorClass import integrator
 
 

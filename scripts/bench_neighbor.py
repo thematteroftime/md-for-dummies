@@ -18,7 +18,7 @@ if cs.UNITS is None or cs.UNITS.name != "reduced":
     cs.reconfigure(units="reduced", log=False, debug=False, profiler=False)
 from atomSystemClass import AtomSystem
 from searchBox import searchBox
-from forceFieldClass import HertzianNonreciprocal
+from forces import HertzianNonreciprocal
 from integratorClass import integrator
 from dataFiles.lattice_gen import make_prx_square2d
 

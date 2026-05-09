@@ -36,7 +36,7 @@ thesis_chapter: §5
 
 ```yaml
 name: HertzianNonreciprocal
-class_path: forceFieldClass.HertzianNonreciprocal
+class_path: forces.hertzian_nonreciprocal:HertzianNonreciprocal
 registered_force_type: hertzian_nonreciprocal
 units: reduced  # σ=ε=m=k_B=1
 new_class_required: false
@@ -123,7 +123,7 @@ E1v3 actual (post-hoc): slope_A=0.6617, slope_B=0.687, τ=2.86 — all PASS.
 
 | Asset | Path | Status |
 |-------|------|--------|
-| force class | `forceFieldClass.HertzianNonreciprocal` | reused (verified line-by-line vs Eq.(1)) |
+| force class | `forces.hertzian_nonreciprocal:HertzianNonreciprocal` | reused (verified line-by-line vs Eq.(1)) |
 | entry script | `prx_nonreciprocal_run.py` | reused; `--N --phi --T0 --nu --steps` overrides |
 | analyzer | `toolClass.PRXAnalyzer.full_analysis` | reused (auto-invoked) |
 | run dispatcher | `scripts/run_experiment.py:_invoke_md` | reused (force_type=hertzian_nonreciprocal branch) |

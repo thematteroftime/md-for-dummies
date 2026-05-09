@@ -32,7 +32,7 @@ thesis_chapter: §4
 
 ```yaml
 name: ERPotential
-class_path: forceFieldClass.ERPotential
+class_path: forces.er_potential:ERPotential
 registered_force_type: er_plasma
 units: macro  # mm, ms, K
 new_class_required: false
@@ -102,7 +102,7 @@ All within budget.
 
 | Asset | Path | Status |
 |-------|------|--------|
-| force class | `forceFieldClass.ERPotential` | reused |
+| force class | `forces.er_potential:ERPotential` | reused |
 | entry script | `er_plasma_run.py` | reused |
 | analyzer | `scripts/analyze_er_long.py` | extended for G2 |
 | legacy ground truth | `dataFiles/ER_Sim_MT12_F_direction_100000.xyz` | cross-validation |

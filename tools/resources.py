@@ -90,16 +90,37 @@ class ResourceEstimator:
         }
 
     @staticmethod
+    def _force_specific_header(config):
+        """Return the parenthesized parameter summary for the preflight banner,
+        dispatched by `force_type`. Falls back to the PRX (φ, T₀) shape if
+        the force_type is unknown or unset."""
+        force_type = config.get("force_type", "hertzian_nonreciprocal")
+        try:
+            from forces import FORCE_REGISTRY
+            ForceCls = FORCE_REGISTRY.get(force_type)
+            fields = getattr(ForceCls, "PREFLIGHT_FIELDS", ()) if ForceCls else ()
+        except Exception:
+            fields = ()
+        if not fields:
+            phi = config.get("phi", config.get("phi_target", "?"))
+            T0 = config.get("T0", config.get("T0_star", "?"))
+            return f"φ={phi}, T₀={T0}"
+        # Only show fields the user actually populated; drop steps/N which the
+        # main banner prints anyway.
+        skip = {"steps", "N"}
+        parts = [f"{k}={config[k]}" for k in fields if k in config and k not in skip]
+        return ", ".join(parts) if parts else f"force_type={force_type}"
+
+    @staticmethod
     def print_preflight(config, est=None):
         """Pretty-print preflight estimate. Returns the est dict."""
         if est is None:
             est = ResourceEstimator.estimate_run(config)
         tag = config.get("tag", "?")
-        phi = config.get("phi", config.get("phi_target", "?"))
-        T0 = config.get("T0", config.get("T0_star", "?"))
+        header_params = ResourceEstimator._force_specific_header(config)
         print()
         print(f"  ╔═══════════════════════════════════════════════════════════╗")
-        print(f"  ║   PREFLIGHT — {tag}  (φ={phi}, T₀={T0})                       ")
+        print(f"  ║   PREFLIGHT — {tag}  ({header_params})                       ")
         print(f"  ╠═══════════════════════════════════════════════════════════╣")
         print(f"  ║ steps          = {est['steps']:>12,}                          ")
         print(f"  ║ N_total        = {est['N_total']:>12,}                          ")

@@ -9,7 +9,7 @@ Implements the adapter contract from docs/ARCHITECTURE.md §3.1:
 To create your adapter:
   1. Copy this template to project root as `<topic>_run.py`
   2. Replace ALL <PLACEHOLDERS> in upper-case
-  3. Replace `<FORCE_CLASS>` with your class from forceFieldClass.py
+  3. Replace `<FORCE_CLASS>` with your class from forces/<your_force>.py
   4. Add CLI flags for any per-experiment overrides
   5. Update PARAMS dict with paper defaults
   6. Run `python <topic>_run.py --tag smoke --steps 100` for a smoke test
@@ -40,7 +40,7 @@ from systemClass import simulator, systemRun
 from searchBox import searchBox
 
 # TODO: import your paper's force class
-from forceFieldClass import <FORCE_CLASS>
+from forces import <FORCE_CLASS>
 
 
 # ===========================================================================

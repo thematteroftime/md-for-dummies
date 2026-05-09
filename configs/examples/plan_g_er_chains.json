@@ -1,5 +1,5 @@
 {
-  "_comment": "Plan G — PRL 2008 ER plasma reproduction. Reuses existing ERPotential force class (forceFieldClass.py:117-172, anisotropic Yukawa V = α[exp(-r/λ)/r - 0.43·MT²·λ²·(3cos²θ-1)/r³]). Macro units (mm, ms, K). Verified against legacy ER_Sim_MT12 output at frame 50000 (chain spacing r≈0.21mm = 4.3λ, g_∥(r) dominant, g_⊥(r) flat). Sweep MT to capture chain-formation phase transition. Run length 50000 steps to avoid late-time instability seen at frame 99999 of legacy run.",
+  "_comment": "Plan G — PRL 2008 ER plasma reproduction. Reuses existing ERPotential force class (forces/er_potential.py, anisotropic Yukawa V = α[exp(-r/λ)/r - 0.43·MT²·λ²·(3cos²θ-1)/r³]). Macro units (mm, ms, K). Verified against legacy ER_Sim_MT12 output at frame 50000 (chain spacing r≈0.21mm = 4.3λ, g_∥(r) dominant, g_⊥(r) flat). Sweep MT to capture chain-formation phase transition. Run length 50000 steps to avoid late-time instability seen at frame 99999 of legacy run.",
   "_force_type_doc": "ERPotential (anisotropic Yukawa)",
   "_units_doc": "macro (mm, ms, K)",
   "campaign": [

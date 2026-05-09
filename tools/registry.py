@@ -24,17 +24,32 @@ from __future__ import annotations
 import importlib
 from typing import Any, Type
 
-# Registered classes. Add a new entry when adding an analyzer/visualizer.
+# Registered classes. ONE forwarding station for the whole framework: every
+# extension point — forces, lattices, analyzers, plotters, aggregators,
+# visualizers — registers here. To find what's wired up, read this file.
+#
+# When adding any new class, also register it in the matching package's local
+# __init__.py (e.g. forces/__init__.py:FORCE_REGISTRY) so direct-import users
+# see it too. The two registries kept in sync is the framework contract.
 _REGISTRY: dict[str, str] = {
-    # analyzers
+    # forces (pair potentials; force_type strings used in configs/plan_*.json)
+    "lennardJones":           "forces.lennard_jones:lennardJones",
+    "ERPotential":            "forces.er_potential:ERPotential",
+    "HertzianNonreciprocal":  "forces.hertzian_nonreciprocal:HertzianNonreciprocal",
+    # lattices (initial-condition generators)
+    "square_2d":              "tools.lattices.square_2d:SquareLattice2D",
+    "triangular_2d":          "tools.lattices.triangular_2d:TriangularLattice2D",
+    "octagonal_2d":           "tools.lattices.octagonal_2d:OctagonalLattice2D",
+    "simple_cubic_3d":        "tools.lattices.simple_cubic_3d:SimpleCubicLattice3D",
+    # analyzers (per-run)
     "PRXAnalyzer":            "tools.analyzers.prx:PRXAnalyzer",
-    "ERAnalyzer":             "tools.analyzers.er:ERAnalyzer",        # Phase B body wrapped in Phase E
-    # plotters
+    "ERAnalyzer":             "tools.analyzers.er:ERAnalyzer",
+    # plotters (per-run figures)
     "PRXPlotter":             "tools.plotters.prx:PRXPlotter",
     # aggregators (cross-run; Phase 4 dispatcher resolves these)
     "PRXAggregator":          "tools.aggregators.prx:PRXAggregator",
     "ERAggregator":           "tools.aggregators.er:ERAggregator",
-    # visualizers
+    # visualizers (interactive / video)
     "TaichiTrajectoryViz":    "tools.visualizers.taichi_traj:TaichiTrajectoryViz",
     # runner
     "ExperimentRunner":       "tools.runner:ExperimentRunner",

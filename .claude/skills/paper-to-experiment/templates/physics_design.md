@@ -12,12 +12,24 @@
 - **paper_title**: `<full title>`
 - **citation**: `Author et al., Journal Vol, page (Year)`
 - **doi**: `10.XXXX/...`
-- **paper_pdf**: `papers/<file>.pdf`  *(path relative to project root)*
+- **paper_pdf**: `papers/<file>.pdf`  *(path relative to project root — REQUIRED, see SKILL Hard rule #2)*
 - **rendered_pages**: `papers/rendered/page_*.png`  *(optional, leave blank if not rendered)*
 - **key_equations**: `Eq.(1), Eq.(10), ...`  *(comma-separated paper equation labels)*
 - **key_figures**: `Fig.1, Fig.2, ...`  *(comma-separated paper figure labels)*
 - **legacy_data**: `<file path or "none">`  *(prior simulation outputs to cross-validate against)*
 - **thesis_chapter**: `§<N>`  *(毕设章节号)*
+
+### Open questions early checklist  *(fill BEFORE rest of design)*
+
+The list of items only the user can resolve. If non-empty, an autonomous agent must surface and stop here — DO NOT push through into §1 onward and present a finished design that hides the ambiguity.
+
+- [ ] Paper PDF on disk at `papers/<slug>.pdf` (Hard rule #2)? `yes / no`
+- [ ] All required parameters in §1 cited from paper passage? `yes / no — list missing:`
+- [ ] Force type is `reuse` or `extend`? If `extend`, do you have user greenlight for the 8-step extension cost?
+- [ ] Cost budget bracket from §7 fits within `< 24 hr / run` and `< 8 GB VRAM`? `yes / no`
+- [ ] Open `ASK USER:` questions count: `<N>`  →  if `> 0`, they MUST be enumerated in §10b before proceeding.
+
+If any line is `no` or `> 0`, **stop**. The cheapest place to surface a question is here, before 80% of the design is written and discarded.
 
 ---
 
@@ -36,7 +48,7 @@ Add as many rows as needed. If observable is **derived** (not directly in paper)
 ## §2 Force field
 
 - **name**: `<HertzianNonreciprocal | ERPotential | NEW>`
-- **class_path**: `forceFieldClass.<ClassName>`  *(only if existing)*
+- **class_path**: `forces.<your_force>:<ClassName>`  *(only if existing; see `tools/registry.py:_REGISTRY` for known classes)*
 - **registered_force_type**: `<hertzian_nonreciprocal | er_plasma | NEW_TYPE>`  *(see `references/force_types.md`)*
 - **units**: `reduced` *(σ, ε, m=1, k_B=1)* or `macro` *(mm, ms, K)*
 - **new_class_required**: `true | false`
@@ -46,18 +58,22 @@ Add as many rows as needed. If observable is **derived** (not directly in paper)
 
 The skill CANNOT ship a strict-validating config until at least Step 5 is merged into the framework — that work is OUT OF SCOPE for the skill itself. Use this checklist to surface what blocks the campaign:
 
-**6-step extension status** (mirrors `references/force_types.md §4`):
+**8-step extension status** (mirrors `references/force_types.md §4`):
 
-| Step | Action | Files touched | Status |
-|------|--------|---------------|--------|
-| 1 | Add `<NewClass>` to `forceFieldClass.py` (`requires_full_list`, `@ti.kernel updateAllF`) | `forceFieldClass.py` | ☐ todo / ☐ in PR / ☐ merged |
-| 2 | Tests for the new class (analytic 2-particle, symmetry, cutoff) | `tests/test_<class>_<N>cases.py` | ☐ |
-| 3 | Entry script `<topic>_run.py` (mirror existing adapters) | `<topic>_run.py` | ☐ |
-| 4 | Dispatch wiring in `_invoke_md` + `EXP_REQUIRED_<TYPE>` | `scripts/run_experiment.py` | ☐ |
-| 5 | Schema update: add to `force_type` enum + new if/then with `ndim` and `units_regime` constants | `templates/plan_config.schema.json` | ☐ |
-| 6 | Registry section: paper ref, compat, fields, pre-flight rules | `references/force_types.md` | ☐ |
+| Step | Action | Files touched | Registers at | Status |
+|------|--------|---------------|--------------|--------|
+| 1 | Force class | `forces/<your_force>.py` (subclass `forceField`) | `forces/__init__.py:FORCE_REGISTRY` + `tools/registry.py:_REGISTRY` | ☐ todo / ☐ in PR / ☐ merged |
+| 2 | Tests | `tests/test_<class>_<N>cases.py` | (no registry — pytest auto-discovers) | ☐ |
+| 3 | Adapter | `<topic>_run.py` at project root | (no registry — referenced by step 4 dispatcher) | ☐ |
+| 4 | Dispatch + validator | `scripts/run_experiment.py:_invoke_md` + `EXP_DEFAULTS_BY_TYPE` + `EXP_REQUIRED_<TYPE>`; `scripts/validate_config.py:check_force_type_specific` | (in-file branches; no separate registry) | ☐ |
+| 5 | Schema | `templates/plan_config.schema.json` | (enum + if/then) | ☐ |
+| 6 | Force registry doc | `references/force_types.md` (new `## N.` section) | (this doc IS the registry) | ☐ |
+| 7 | Analyzer | `tools/analyzers/<paper>.py:<Paper>Analyzer.full_analysis` | `tools/registry.py:_REGISTRY` (analyzers block) | ☐ |
+| 8 | Plotter / aggregator | `tools/plotters/<paper>.py:<Paper>Plotter.render`; opt. `tools/aggregators/<paper>.py:<Paper>Aggregator` | `tools/registry.py:_REGISTRY` (plotters + aggregators) | ☐ |
 
-**The skill MUST NOT mark this design "approved" while any step is `☐ todo`.** If the user wants a placeholder config to draft analysis pipelines against, mark that explicitly in `_comment` and use a degenerate-parameter reuse from an existing class — but flag the deviation in §10b as `ASK USER:` per anti-pattern in `SKILL.md`.
+**The skill MUST NOT mark this design "approved" while any step is `☐ todo`.** A reproduction that stops at step 6 produces only `manifest.json` + `*.h5` per run dir — engine wires up, but nothing is measured or plotted. By SKILL Hard rule #9, that is incomplete.
+
+If the user wants a placeholder config to draft analysis pipelines against, mark that explicitly in `_comment` and use a degenerate-parameter reuse from an existing class — but flag the deviation in §10b as `ASK USER:` per anti-pattern in `SKILL.md`.
 
 **Sub-fields**:
 
@@ -92,10 +108,14 @@ The skill CANNOT ship a strict-validating config until at least Step 5 is merged
 - **boundary_conditions**: `periodic | wall | mixed`
 - **thermostat**: `NVE | Langevin(ν=<value>) | Bussi`
 - **integrator**: `BAOAB | Verlet | (other)`
+- **initial_state**: `square_2d | triangular_2d | octagonal_2d | simple_cubic_3d | from_file | custom`
+  *(default: `square_2d` for ndim=2, `simple_cubic_3d` for ndim=3. Override only when paper specifies. For long-range repulsive forces, random IC is forbidden — see `force_types.md §3 Long-range repulsive IC caveat`. Lattice generators live in `tools/lattices/`; pass paper-required parameters via the adapter's `lattice_params` dict.)*
+- **equilibration_steps**: `<int or 0>`
+  *(integration steps to discard before measurement window. For random IC + long-range repulsion: ≥ 5×(1/ω_p). For lattice IC: usually 0–10×(1/ω_p) of NVE relaxation.)*
 - **write_stride**: `<int>` *(frames between HDF5 writes)*
 - **chunk_size**: `<int>` *(per-chunk frames in HDF5; cap at 200 unless RAM allows more)*
 - **cho**: `1` *(cell-list, default for N>3000)* or `2` *(O(N²), small N)*
-- **steps_per_run**: `<int>`  *(total integration steps)*
+- **steps_per_run**: `<int>`  *(total integration steps, INCLUDING equilibration_steps)*
 - **t_total**: `<computed: steps × dt>` `<unit>`
 
 ---
@@ -172,7 +192,7 @@ Fill from `ResourceEstimator.print_preflight()` after a smoke run, OR estimate f
 
 | Asset | Path | Reused / new |
 |-------|------|--------------|
-| force class | `forceFieldClass.<X>` | reused |
+| force class | `forces.<x>:<X>` | reused |
 | entry script | `<X>_run.py` | reused / new |
 | analyzer | `<scripts/analyze_X.py>` | reused / new |
 | legacy ground truth | `<path>` | for cross-validation |

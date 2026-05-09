@@ -24,7 +24,7 @@ Thanks for considering a contribution. This is a small framework with strong opi
 
 - **Alternative integrators / accelerators.** The Layer 1 core is intentionally frozen. There are excellent fast MD engines elsewhere; this isn't trying to be one.
 - **Giant abstraction layers.** Prefer one focused module per concept.
-- **Force classes without tests.** Every `forceFieldClass` addition needs at least 4 test cases (analytic 2-particle force, symmetry, cutoff boundary, regression).
+- **Force classes without tests.** Every new `forces/<your_force>.py` needs at least 4 test cases (analytic 2-particle force, symmetry, cutoff boundary, regression).
 
 ## Step-by-step: contributing a new paper reproduction
 
@@ -58,7 +58,7 @@ If you don't have Claude Code, use the templates manually:
 
 ### 3. If your paper needs a new force type
 
-Follow `references/force_types.md` §3 — the 6-step extension process:
+Follow `references/force_types.md` §4 — the 8-step extension process:
 
 1. Add force class (use `templates/force_class.py.template`)
 2. Write tests (`tests/test_<class>_4cases.py`)

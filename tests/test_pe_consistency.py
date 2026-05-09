@@ -15,7 +15,7 @@ os.chdir(ROOT)
 import constSet as cs
 from atomSystemClass import AtomSystem
 from searchBox import searchBox
-from forceFieldClass import lennardJones
+from forces import lennardJones
 
 
 def lj_pair(r, sigma=1.0, eps=1.0):

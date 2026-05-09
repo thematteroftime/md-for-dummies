@@ -1,14 +1,20 @@
-# Append this class to `forceFieldClass.py` (do NOT save as a separate file —
-# Layer 1 infrastructure is consolidated in forceFieldClass.py).
+# Save this file as `forces/<your_force>.py` — one file per force class.
+# After saving:
+#   1. Tests: tests/test_<class>_4cases.py (mandatory before any production run)
+#   2. Adapter: <topic>_run.py at project root
+#   3. Dispatch: scripts/run_experiment.py:_invoke_md elif branch + EXP_DEFAULTS_BY_TYPE entry
+#   4. Validator: scripts/validate_config.py:check_force_type_specific elif branch
+#   5. Schema: templates/plan_config.schema.json (force_type enum + if/then)
+#   6. Doc: references/force_types.md new ## N. section
+#   7. Analyzer: tools/analyzers/<paper>.py + register tools/registry.py
+#   8. Plotter: tools/plotters/<paper>.py + register tools/registry.py
 #
-# After appending:
-#   1. Write tests: tests/test_<class>_4cases.py (mandatory before any production run)
-#   2. Update force_types.md: add §N section per `references/force_types.md` §3
-#   3. Update plan_config.schema.json: add to force_type enum + conditional required fields
-#   4. Update scripts/run_experiment.py:_invoke_md: add elif branch
+# Register the class itself in TWO places (forwarding-station + local registry):
+#   - tools/registry.py:_REGISTRY  (single forwarding station)
+#   - forces/__init__.py:FORCE_REGISTRY  (local convenience registry)
 #
-# This template covers the REQUIRED interface in forceFieldClass.py (other classes
-# in that file all conform).
+# This template covers the REQUIRED interface (forceField subclass — see
+# forces/base.py for the parent).
 
 import taichi as ti
 
@@ -41,8 +47,8 @@ class <NewForceClass>:
     def updateAllF(self, atomSystem: ti.template(), searchBox: ti.template()):
         """Compute all pair forces, write into atomSystem.f and atomSystem.pe_per_atom.
 
-        Pattern (mirror existing classes in forceFieldClass.py — see
-        lennardJones.updateOneF_reciprocal for the reciprocal canonical form):
+        Pattern (mirror existing classes in forces/ — see
+        forces/lennard_jones.py:lennardJones.updateOneF_reciprocal for the reciprocal canonical form):
           - iterate (i, jj) over neighbor list
           - compute r = pos[j] - pos[i]
           - apply MIC (minimum-image convention) for periodic BC

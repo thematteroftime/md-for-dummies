@@ -30,7 +30,7 @@ cs.UNITS = cs.Units(name='reduced', K_B=1.0, KE_E2=1.0,
 cs.K_B = 1.0; cs.KE_E2 = 1.0
 from atomSystemClass import AtomSystem
 from searchBox import searchBox
-from forceFieldClass import lennardJones
+from forces import lennardJones
 from integratorClass import integrator
 import numpy as np
 

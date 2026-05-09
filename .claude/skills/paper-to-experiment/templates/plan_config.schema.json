@@ -96,7 +96,7 @@
         },
         "units_regime": {
           "enum": ["reduced_lj", "macro_dust", "reduced_yukawa"],
-          "description": "Closed-enum unit regime label. reduced_lj = (σ, ε, m=1, k_B=1) per PRX 2015; macro_dust = (mm, ms, K) per PRL 2008; reduced_yukawa = (a_WS, ω_p, Q=k_B=m=1) for Yukawa OCP. Add new values via the 6-step extension process in force_types.md §3."
+          "description": "Closed-enum unit regime label. reduced_lj = (σ, ε, m=1, k_B=1) per PRX 2015; macro_dust = (mm, ms, K) per PRL 2008; reduced_yukawa = (a_WS, ω_p, Q=k_B=m=1) for Yukawa OCP. Add new values via the 8-step extension process in force_types.md §4."
         },
         "steps":  { "type": "integer", "minimum": 100, "maximum": 50000000 },
         "stride": { "type": "integer", "minimum": 1, "maximum": 100000 },

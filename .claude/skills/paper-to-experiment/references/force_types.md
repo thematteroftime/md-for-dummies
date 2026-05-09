@@ -2,7 +2,7 @@
 
 Authoritative source for which `force_type` strings are valid in `configs/plan_*.json` and what fields each requires. Skill must consult this BEFORE proposing any config field.
 
-When adding a new force type, follow §3 below — registry is the gatekeeper, schema and skill follow.
+When adding a new force type, follow §4 below (8-step extension) — registry is the gatekeeper, schema and skill follow.
 
 ---
 
@@ -10,7 +10,7 @@ When adding a new force type, follow §3 below — registry is the gatekeeper, s
 
 - **paper**: Ivlev et al. *Phys. Rev. X* 5, 011035 (2015), Eq. (1)
 - **entry script**: `prx_nonreciprocal_run.py`
-- **force class**: `forceFieldClass.HertzianNonreciprocal`
+- **force class**: `forces.hertzian_nonreciprocal:HertzianNonreciprocal`
 - **analyzer**: `toolClass.PRXAnalyzer` (in-process via `PRXAnalyzer.full_analysis`)
 - **compat**: `ndim=3`, `units_regime=reduced_lj`
 - **box**: derived from N and φ
@@ -63,7 +63,7 @@ When adding a new force type, follow §3 below — registry is the gatekeeper, s
 
 - **paper**: Ivlev et al. *Phys. Rev. Lett.* 100, 095003 (2008)
 - **entry script**: `er_plasma_run.py`
-- **force class**: `forceFieldClass.ERPotential` (anisotropic Yukawa, Eq. (1))
+- **force class**: `forces.er_potential:ERPotential` (anisotropic Yukawa, Eq. (1))
 - **analyzers**: `scripts/analyze_er.py` (CLI, accepts `--runs` glob), `tools.analyzers.er.ERAnalyzer` (registry-callable wrapper)
 - **compat**: `ndim=3`, `units_regime=macro_dust` — required, ERPotential hard-codes 3D and the macro mm/ms/K scale
 - **integrator**: BAOAB with Langevin damping (default `nu=0.1 /ms`)
@@ -142,33 +142,52 @@ Even though z is force-zeroed every integrator step (`integratorClass.inteBegin`
 - Write force ONLY to `force[i]` (never to `force[j]`) — the reverse visit handles `j` separately.
 - Accumulate PE as `pe_per_atom[i] += 0.5 * U_pair` (the 0.5 factor compensates for the duplicate visit).
 
-Read `lennardJones.updateOneF_reciprocal` (`forceFieldClass.py:74-93`) for the canonical reciprocal pattern. The template `force_class.py.template` documents this in detail.
+Read `lennardJones.updateOneF_reciprocal` (`forces/lennard_jones.py`) for the canonical reciprocal pattern. The template `force_class.py.template` documents this in detail.
 
 ### Initial state
 
 `AtomSystem.initData(positions, masses, T0, boxList, groups=...)` calls `scaleVel` internally — velocities are randomized to T0. Tests that need zero initial velocity must call `A.vel.fill(0.0)` AFTER `initData`.
 
+### Long-range repulsive IC caveat
+
+For force types whose pair potential diverges (or stays large) as `r→0` — Coulomb, Yukawa, screened-dipole, anything with a hard core — random uniform initial positions inevitably contain small-r overlaps. On step 1 these get converted into kinetic energy:
+
+- A few overlapping pairs at `r ~ 0.1·a` produce orders-of-magnitude force spikes.
+- The integrator turns the spurious PE into spurious KE within a single step, leaving `T_init ≫ T0_target`.
+- If the run is short (≤ a few `1/ω_p`) and Langevin damping is heavy (`ν > 0.05`), the damping over-cools relative to the fluctuation-dissipation balance and the steady-state `T_meas` ends up *below* `T0_target`. Observed shortfall in autonomous-Yukawa-OCP test: `T_meas ≈ T0/10` after 100·`1/ω_p`.
+
+**Mitigation, in order of preference:**
+1. **Lattice IC + brief NVE warmup**: use `tools/lattices/<lattice>_<dim>.py` (default `square_2d` / `simple_cubic_3d`; or `triangular_2d` for hexatic phases) followed by NVE for `~10·(1/ω_p)` to dissipate any residual lattice-mode energy.
+2. **Random IC + soft repulsion ramp**: scale the potential by `λ(t)` ramping from 0 → 1 over `~5·(1/ω_p)` to avoid the step-1 overlap spike.
+3. **Random IC + heavy short Langevin equilibration THEN swap to weak**: legitimate but parameter-sensitive.
+
+Any new force class subclassing `forceField` whose potential diverges at the origin SHOULD declare its IC expectation in the design doc §3 `initial_state` field (not random). Adapter default for ndim=2 is `square_2d`, ndim=3 is `simple_cubic_3d`; override only when paper specifies otherwise.
+
 ---
 
 ## 4. Adding a new force type
 
-When a new paper requires a force class not listed above, walk through these 6 steps in order. **The skill cannot ship a strict-validating config until at least Step 5 is merged**, so flag the entire chain in design doc §2a as a status checklist.
+When a new paper requires a force class not listed above, walk these **8 steps** in order. **A reproduction that stops at step 6 has only proved the engine wires up — no `report.md`, no plots.** By SKILL.md Hard rule #9, that is incomplete. Flag the entire chain in design doc §2a as a status checklist.
 
 1. **Force class implementation**
-   - Add `<NewClass>` to `forceFieldClass.py` with `requires_full_list` attribute and `@ti.kernel updateAllF`.
-   - Pattern: copy nearest existing class (`HertzianNonreciprocal` for non-reciprocal, `ERPotential` for anisotropic radial, `LJ` for simple radial).
+   - Write `forces/<your_force>.py` with class subclassing `forceField` (`forces/base.py`), declaring `requires_full_list` and `PREFLIGHT_FIELDS`.
+   - Pattern: copy nearest existing class (`forces/hertzian_nonreciprocal.py` for non-reciprocal, `forces/er_potential.py` for anisotropic radial, `forces/lennard_jones.py` for simple radial).
+   - **Register**: add the class to `forces/__init__.py:FORCE_REGISTRY` AND to `tools/registry.py:_REGISTRY`. Both, in sync.
 
 2. **Tests** (mandatory before any production run)
    - `tests/test_<class>_<N>cases.py` covering: 2-particle force vs analytic; F symmetry/antisymmetry; cutoff boundary.
    - Run `pytest tests/test_<class>_*.py` until green.
 
-3. **Entry script**
-   - Create `<topic>_run.py` mirroring `prx_nonreciprocal_run.py` / `er_plasma_run.py` structure.
+3. **Entry script (adapter)**
+   - Create `<topic>_run.py` at project root mirroring `prx_nonreciprocal_run.py` / `er_plasma_run.py`.
    - CLI flags must include all required fields from §1 above.
+   - Use `tools.lattices.LATTICE_REGISTRY[design_doc.initial_state]` for the initial configuration. Default IC: `square_2d` for ndim=2, `simple_cubic_3d` for ndim=3.
 
-4. **Dispatch in run_experiment**
+4. **Dispatch in run_experiment + validator**
    - Edit `scripts/run_experiment.py:_invoke_md` — add a new branch for the new `force_type`.
+   - Edit `scripts/run_experiment.py:EXP_DEFAULTS_BY_TYPE` — add per-force-type defaults so PRX-shaped values don't silently rewrite your campaign entries.
    - Update `EXP_REQUIRED_<TYPE>` constant with required fields.
+   - Edit `scripts/validate_config.py:check_force_type_specific` — add the parallel `elif force_type == "<your_type>":` branch. (Forgetting this causes a silent `else: res.err("unknown force_type")` and the validator rejects every campaign with the new type.)
 
 5. **Schema update**
    - Edit `templates/plan_config.schema.json`:
@@ -176,16 +195,30 @@ When a new paper requires a force class not listed above, walk through these 6 s
      - Add new `if/then` block in `allOf` mapping force_type → required-fields + `ndim` + `units_regime` constants.
      - If a brand-new units regime is needed, also extend the top-level `units_regime` enum.
 
-6. **Registry update**
+6. **Registry section in this file**
    - Add a new section here (`## N. <new_type>`) with paper ref, fields, **compat block** (`ndim=...`, `units_regime=...`), examples, pre-flight rules.
 
-After all 6 steps, the new force_type is usable in `configs/*.json` and the skill will recognize it.
+7. **Analyzer (per-run)**
+   - Write `tools/analyzers/<paper>.py` exposing `<Paper>Analyzer.full_analysis(run_dir, **params) -> dict`. The returned dict's fields drive the per-run `report.md` written in `<run_dir>/report.md`.
+   - **Register**: add to `tools/registry.py:_REGISTRY` under the analyzers section. Without this step the run dir gets only `manifest.json + h5` — engine wires up but nothing is measured.
+   - In your config, set `pipeline.analyze.class = "<Paper>Analyzer"`.
+
+8. **Visualizer + aggregator**
+   - Write `tools/plotters/<paper>.py` exposing `<Paper>Plotter.render(run_dir, **params) -> None` writing `figN_*.png` into the run dir.
+   - Optional but recommended: write `tools/aggregators/<paper>.py:<Paper>Aggregator.aggregate(run_dirs, output, plots, title, **params)` for the cross-run master report.
+   - **Register both** in `tools/registry.py:_REGISTRY`.
+   - In your config, set `pipeline.visualize.class = "<Paper>Plotter"` AND `aggregation.class = "<Paper>Aggregator"`.
+
+After all 8 steps:
+- Each production run dir contains `manifest.json` + `report.md` + at least one `fig*.png`.
+- The cross-run report (e.g. `docs/<paper>_campaign_report.md`) renders a coherent answer to the paper's question.
+- `python scripts/validate_config.py --strict` passes.
 
 ### Anti-pattern: reuse-with-degenerate-parameter
 
-There is a tempting third option to "reuse" vs "extend": pick an existing force class that algebraically reduces to the target physics under a parameter setting (e.g. `ERPotential` with `MT=0` is mathematically a pure isotropic Yukawa). This produces a strict-validating config in 5 minutes WITHOUT going through Steps 1-6.
+There is a tempting third option to "reuse" vs "extend": pick an existing force class that algebraically reduces to the target physics under a parameter setting (e.g. `ERPotential` with `MT=0` is mathematically a pure isotropic Yukawa). This produces a strict-validating config in 5 minutes WITHOUT going through Steps 1-8.
 
-**Do not do this for thesis-quality reproductions.** The manifest will lie about which physics ran (`force_class=ERPotential` instead of `YukawaIsotropic`), the dead anisotropy machinery is allocated and integrated even though it contributes zero, and downstream analyzers may misinterpret the data because they were written for the more general class. Surface this trade-off in design doc §10b as an `ASK USER:` decision, with the recommendation that thesis or published work should go through the full 6 steps.
+**Do not do this for thesis-quality reproductions.** The manifest will lie about which physics ran (`force_class=ERPotential` instead of `YukawaIsotropic`), the dead anisotropy machinery is allocated and integrated even though it contributes zero, and downstream analyzers may misinterpret the data because they were written for the more general class. Surface this trade-off in design doc §10b as an `ASK USER:` decision, with the recommendation that thesis or published work should go through the full 8 steps.
 
 ---
 
@@ -203,5 +236,8 @@ Skill MUST NOT auto-rewrite legacy configs. If user is migrating, flag it explic
 
 - **Schema**: `templates/plan_config.schema.json`
 - **Skill main**: `SKILL.md`
+- **Force forwarding station**: `tools/registry.py:_REGISTRY` (single source of truth for forces / lattices / analyzers / plotters / aggregators / visualizers)
+- **Force package**: `forces/__init__.py:FORCE_REGISTRY` (local registry, kept in sync with forwarding station)
+- **Lattice package**: `tools/lattices/__init__.py:LATTICE_REGISTRY` + `DEFAULT_LATTICE_BY_NDIM`
 - **Run dispatcher**: `scripts/run_experiment.py:_invoke_md`
-- **Validator**: `scripts/validate_config.py`
+- **Validator**: `scripts/validate_config.py:check_force_type_specific`

@@ -28,7 +28,7 @@ os.chdir(ROOT)
 import constSet as cs
 from atomSystemClass import AtomSystem
 from searchBox import searchBox
-from forceFieldClass import HertzianNonreciprocal
+from forces import HertzianNonreciprocal
 
 
 def test_hertzian_4cases():

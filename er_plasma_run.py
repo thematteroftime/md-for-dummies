@@ -30,7 +30,7 @@ import constSet as cs
 from constSet import *
 from atomSystemClass import AtomSystem
 from integratorClass import integrator
-from forceFieldClass import ERPotential
+from forces import ERPotential
 from systemClass import simulator, systemRun
 from searchBox import searchBox
 

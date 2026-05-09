@@ -23,7 +23,7 @@ import constSet as cs
 from constSet import *
 from atomSystemClass import AtomSystem
 from integratorClass import integrator
-from forceFieldClass import HertzianNonreciprocal
+from forces import HertzianNonreciprocal
 from systemClass import simulator, systemRun
 from searchBox import searchBox
 from toolClass import fileOperator

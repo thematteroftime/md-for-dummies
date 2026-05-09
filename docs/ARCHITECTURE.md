@@ -46,10 +46,11 @@ The framework is **strictly layered**. Each layer talks ONLY to the layer below 
 ╠══════════════════════════════════════════════════════════════════════╣
 ║  Layer 1 — INFRASTRUCTURE (FROZEN — physics core, do not modify)       ║
 ║  systemClass.py, atomSystemClass.py, integratorClass.py,               ║
-║  searchBox.py, forceFieldClass.py, constSet.py                         ║
+║  searchBox.py, forces/, constSet.py                                    ║
 ║  • Taichi 1.7.4 kernels: BAOAB integrator, cell-list/O(N²) neighbors   ║
 ║  • HDF5 async chunked writer                                           ║
-║  • Force classes: HertzianNonreciprocal, ERPotential, LJ, ...          ║
+║  • Force classes (one file each in forces/):                           ║
+║    HertzianNonreciprocal, ERPotential, lennardJones                    ║
 ║  Out of scope for now: integrators, accelerators (current sufficient)  ║
 ╚══════════════════════════════════════════════════════════════════════╝
                                   ▲
@@ -195,7 +196,7 @@ A "paper adapter" is any script in the project root named `<topic>_run.py`. To b
 {
   "tag":            "<from CLI>",
   "run_type":       "<force_type>",
-  "force_class":    "<exact class name in forceFieldClass.py>",
+  "force_class":    "<exact class name from forces/ — see tools/registry.py>",
   "units":          "reduced | macro",
   "run_dir":        "<absolute path>",
   "h5_path":        "<absolute path to trajectory>",
@@ -284,7 +285,7 @@ The framework ships templates at `.claude/skills/paper-to-experiment/templates/`
 | New analyzer | `templates/analyzer.py.template` | `tools/analyzers/<x>.py` |
 | New visualizer | `templates/visualizer.py.template` | `tools/visualizers/<x>.py` |
 | New plotter | `templates/plotter.py.template` | `tools/plotters/<x>.py` |
-| New force class | `templates/force_class.py.template` | append to `forceFieldClass.py` |
+| New force class | `templates/force_class.py.template` | save as `forces/<your_force>.py` |
 
 Each template has ALL contract requirements as `# TODO:` markers. Filling them in order produces a working, contract-compliant component.
 
@@ -354,7 +355,7 @@ Plotter contract:    static fig_<name>(records, out_path, **params)
 To add a new paper:    copy templates/adapter_run.py.template
 To add an analyzer:    copy templates/analyzer.py.template
 To add a viz:          copy templates/visualizer.py.template
-To add a force class:  copy templates/force_class.py.template + 6-step process
+To add a force class:  copy templates/force_class.py.template + 8-step process
                        in references/force_types.md §4
 To add a sweep only:   write configs/plan_X.json + python scripts/run_experiment.py
 ```
