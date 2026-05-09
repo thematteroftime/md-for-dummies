@@ -82,7 +82,7 @@ For §4 (sweep dimensions):
 For §3 simulation setup `initial_state` field:
 - Default to `square_2d` (ndim=2) or `simple_cubic_3d` (ndim=3).
 - Override only when paper specifies a different lattice (e.g. `triangular_2d` for hexatic-phase studies).
-- For long-range repulsive forces (Coulomb / Yukawa / hard-core surrogate), random IC is **forbidden** by `references/force_types.md §3 Long-range repulsive IC caveat` — random IC + short Langevin produces wrong steady-state temperature.
+- For long-range repulsive forces (Coulomb / Yukawa / hard-core surrogate), random IC is **forbidden** by `references/force_types.md` "Long-range repulsive IC caveat" subsection — random IC + short Langevin produces wrong steady-state temperature.
 
 ### Step 4 — User approval
 
@@ -200,7 +200,7 @@ After all 8 steps:
 | "ERPotential with MT=0 is just isotropic Yukawa, reuse it" | The manifest will **lie** about what ran. Dead anisotropy machinery still allocated. Thesis reproductions need clean force classes — flag as §10b decision. |
 | "The pipeline ran fine, manifest.json exists, done" | Hard rule #9: no `report.md` + no `fig*.png` = analyzer / visualizer never registered. Step 7 + 8 of the 8-step extension are not optional. |
 | "I'll register the analyzer in `tools/registry.py` only — skip the local `__init__.py`" | Forwarding station and local registry kept in sync is the framework contract. Both registers, or neither. |
-| "Random IC is fine, the Langevin will sort it out" | For long-range repulsive forces, random IC + short Langevin under-cools by ~10× (see force_types.md §3). Use `tools/lattices/<lattice>` IC instead. |
+| "Random IC is fine, the Langevin will sort it out" | For long-range repulsive forces, random IC + short Langevin under-cools by ~10× (see force_types.md "Long-range repulsive IC caveat"). Use `tools/lattices/<lattice>` IC instead. |
 | "I'll skip §10b open questions to keep flow" | §10b empty is the auto-mode gate. Lying about it produces wrong physics. |
 
 ---

@@ -236,7 +236,7 @@ def _step_rate(N_total: int, cho: int, force_type: str | None = None) -> int:
         elif N_total <= 50000: base = 150
         else:                  base = 60
     else:  # cho=2, O(N^2)
-        if   N_total <= 1000:  base = 500
+        if   N_total <= 1000:  base = 480    # measured on RTX 5060 Laptop, N=1000 KA-LJ
         elif N_total <= 3000:  base = 200
         elif N_total <= 10000: base = 50
         else:                  base = 15

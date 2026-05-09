@@ -165,3 +165,70 @@ def test_skill_md_has_frontmatter():
     assert sm.startswith("---\n"), "SKILL.md must start with YAML frontmatter"
     assert "name: paper-to-experiment" in sm
     assert "description:" in sm
+
+
+def test_registry_local_init_sync():
+    """Every entry in tools/registry.py:_REGISTRY must also appear in the
+    matching package's local __init__.py. This catches the silent "I added
+    the analyzer but forgot to update tools/analyzers/__init__.py" mode
+    that breaks `from tools.analyzers import <X>` imports.
+
+    Pairing: registry-section comment maps to the package whose __init__.py
+    must mirror that section. Sections without a local __init__.py (forces,
+    lattices) skip this check — they have their own FORCE_REGISTRY /
+    LATTICE_REGISTRY dicts which are kept in sync via test_lattices.py.
+    """
+    from tools.registry import _REGISTRY
+
+    # For each registered class, derive (package, classname) from the dotted
+    # target path "<package>.<module>:<ClassName>" and assert that classname
+    # is exported by tools/<package>/__init__.py.
+    SECTION_TO_INIT = {
+        "tools.analyzers":   "tools/analyzers/__init__.py",
+        "tools.plotters":    "tools/plotters/__init__.py",
+        "tools.aggregators": "tools/aggregators/__init__.py",
+    }
+    for name, target in _REGISTRY.items():
+        if ":" not in target:
+            continue
+        module_path, classname = target.rsplit(":", 1)
+        # Find which init we should check
+        for prefix, init_rel in SECTION_TO_INIT.items():
+            if module_path.startswith(prefix + "."):
+                init_path = ROOT / init_rel
+                init_text = init_path.read_text(encoding="utf-8")
+                assert classname in init_text, (
+                    f"registry entry '{name}' -> '{target}' but {init_rel} "
+                    f"does not export {classname}. Add `from {module_path} "
+                    f"import {classname}` and include it in __all__."
+                )
+                break
+
+
+def test_registry_force_type_has_adapter():
+    """Every force_type in the schema enum must have a working adapter at
+    project root (`<topic>_run.py`). Catches the silent "I forgot step 3"
+    failure mode of the 8-step extension flow.
+
+    Mapping: hardcoded since adapter filenames don't currently follow a
+    one-to-one rule with force_type strings (kob_andersen_lj → pedersen_kalj_run.py).
+    Contributors update this map when they add a new force_type.
+    """
+    FT_TO_ADAPTER = {
+        "hertzian_nonreciprocal": "prx_nonreciprocal_run.py",
+        "er_plasma":              "er_plasma_run.py",
+        "kalj":                   "pedersen_kalj_run.py",
+    }
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    enum = schema["definitions"]["experiment"]["properties"]["force_type"]["enum"]
+    for ft in enum:
+        assert ft in FT_TO_ADAPTER, (
+            f"force_type '{ft}' is in schema enum but not mapped to an "
+            f"adapter in tests/test_skill_regression.py:FT_TO_ADAPTER. "
+            f"Add the mapping when registering a new force_type."
+        )
+        adapter = ROOT / FT_TO_ADAPTER[ft]
+        assert adapter.exists(), (
+            f"force_type '{ft}' expects adapter at {adapter} but it doesn't "
+            f"exist. Did you skip step 3 of the 8-step extension flow?"
+        )

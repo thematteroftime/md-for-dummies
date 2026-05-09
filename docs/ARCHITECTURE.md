@@ -177,7 +177,7 @@ A "paper adapter" is any script in the project root named `<topic>_run.py`. To b
 | Path | Required | Format | Content |
 |------|----------|--------|---------|
 | `outputFiles/<TS>_<tag>/manifest.json` | ✓ | JSON | see §3.2 |
-| `outputFiles/<TS>_<tag>/<base>_<step>.h5` | ✓ | HDF5 | trajectory (pos, vel, time, T, …) |
+| `outputFiles/<TS>_<tag>/<base>_<step>.h5` | ✓ | HDF5 | trajectory (pos, vel, time, T, …). HDF5 root attrs include `physics_dt` (per-step timestep, in run units) and `dt` (per-FRAME timestep = `physics_dt × write_stride`). Analyzers should use `attrs["dt"]` directly when integrating MSD vs frame index. |
 | `outputFiles/<TS>_<tag>/run.in` | ✓ | text | archived physics params |
 | `outputFiles/<TS>_<tag>/lattice.xyz` | ✓ | text | archived initial config |
 | stdout | ✓ | text | progress lines, manifest summary |
