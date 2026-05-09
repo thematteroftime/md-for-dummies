@@ -353,4 +353,187 @@ def _file_listing(run_dir):
     return "\n".join(lines)
 
 
+# ---------------------------------------------------------------------------
+# Extension diagnostics (PRX-specific): pair correlation + per-species KE +
+# total-momentum drift. Originally `scripts/extension_analysis.py`; merged
+# here so any caller can invoke `PRXAnalyzer.extension_diagnostics(run_dir)`.
+# ---------------------------------------------------------------------------
+
+def _pair_correlation_2d(positions, species, box_size,
+                          r_max: float = 6.0, n_bins: int = 100):
+    """Per-species pair correlation g_AA(r), g_BB(r), g_AB(r) in 2D PBC.
+
+    Args:
+        positions: (n, 3) array; only x,y used (z dropped).
+        species:   (n,) array; species id 1 == A, 2 == B.
+        box_size:  [Lx, Ly] length-2 sequence.
+        r_max:     histogram extent (reduced units).
+        n_bins:    histogram bin count.
+
+    Returns dict with keys 'r', 'g_AA', 'g_BB', 'g_AB'.
+    """
+    pos2d = positions[:, :2]
+    Lx, Ly = box_size[0], box_size[1]
+    mA = species == 1
+    mB = species == 2
+    pA = pos2d[mA]; pB = pos2d[mB]
+    nA = len(pA); nB = len(pB)
+    area = Lx * Ly
+
+    bin_edges = _np.linspace(0, r_max, n_bins + 1)
+    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+    bin_areas = _np.pi * (bin_edges[1:] ** 2 - bin_edges[:-1] ** 2)
+
+    def _mic(P, Q):
+        d = P[:, None, :] - Q[None, :, :]
+        d[..., 0] -= Lx * _np.round(d[..., 0] / Lx)
+        d[..., 1] -= Ly * _np.round(d[..., 1] / Ly)
+        return _np.linalg.norm(d, axis=-1)
+
+    def _gxx(P, n_self):
+        if n_self <= 1:
+            return _np.zeros(n_bins)
+        d = _mic(P, P)
+        d = d[_np.triu_indices(n_self, k=1)]
+        h, _ = _np.histogram(d, bins=bin_edges)
+        rho = n_self / area
+        norm = rho * bin_areas * (n_self / 2.0)
+        return h / _np.maximum(norm, 1)
+
+    g_AA = _gxx(pA, nA)
+    g_BB = _gxx(pB, nB)
+    if nA > 0 and nB > 0:
+        d_AB = _mic(pA, pB).ravel()
+        h_AB, _ = _np.histogram(d_AB, bins=bin_edges)
+        rho_B = nB / area
+        norm_AB = rho_B * bin_areas * nA
+        g_AB = h_AB / _np.maximum(norm_AB, 1)
+    else:
+        g_AB = _np.zeros(n_bins)
+    return {"r": bin_centers, "g_AA": g_AA, "g_BB": g_BB, "g_AB": g_AB}
+
+
+def _attach_extension(cls):
+    @staticmethod
+    def pair_correlation(positions, species, box_size,
+                          r_max: float = 6.0, n_bins: int = 100):
+        """See _pair_correlation_2d."""
+        return _pair_correlation_2d(positions, species, box_size, r_max, n_bins)
+
+    @staticmethod
+    def extension_diagnostics(run_dir):
+        """Read a single run dir and emit pair-correlation + per-species KE +
+        momentum-drift figures to that dir.
+
+        Side effects:
+            <run_dir>/extension_pair_correlation.png
+            <run_dir>/extension_energy_momentum.png
+            <run_dir>/extension_summary.json
+        Returns the summary dict.
+        """
+        import json as _json
+        run_dir = _Path(run_dir)
+        h5_paths = sorted(run_dir.glob("*.h5"), key=lambda p: p.stat().st_size)
+        if not h5_paths:
+            raise FileNotFoundError(f"no *.h5 under {run_dir}")
+        h5_path = h5_paths[-1]
+        manifest = _json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+        tag = manifest.get("tag", run_dir.name)
+
+        with _h5py.File(h5_path, "r") as f:
+            species = f["species"][:]
+            time = f["time"][:]
+            T_all = f["T"][:]
+            box = f["box"][:]
+            n_frames = T_all.shape[0]
+            idx_early = int(n_frames * 0.05)
+            idx_mid   = int(n_frames * 0.50)
+            idx_late  = int(n_frames * 0.95)
+            gr_results = {}
+            for label, idx in [("early", idx_early), ("mid", idx_mid), ("late", idx_late)]:
+                pos = f["pos"][idx]
+                gr_results[label] = _pair_correlation_2d(
+                    pos, species, [box[0, 0], box[1, 1]], r_max=6.0, n_bins=100)
+                gr_results[label]["t"] = float(time[idx])
+
+            diag_indices = _np.linspace(0, n_frames - 1, 50, dtype=int)
+            ke_A = _np.zeros(len(diag_indices))
+            ke_B = _np.zeros(len(diag_indices))
+            px = _np.zeros(len(diag_indices))
+            py = _np.zeros(len(diag_indices))
+            mA = species == 1; mB = species == 2
+            for i, idx in enumerate(diag_indices):
+                v = f["vel"][idx]
+                ke_A[i] = 0.5 * (v[mA, :2] ** 2).sum()
+                ke_B[i] = 0.5 * (v[mB, :2] ** 2).sum()
+                px[i] = v[:, 0].sum()
+                py[i] = v[:, 1].sum()
+            diag_t = time[diag_indices]
+
+        # Figure 1: g(r) at three time snapshots
+        fig, axs = _plt.subplots(1, 3, figsize=(15, 4.8))
+        for ax, label in zip(axs, ["early", "mid", "late"]):
+            gr = gr_results[label]
+            ax.plot(gr["r"], gr["g_AA"], "C0-", label="g_AA(r)", lw=1.5)
+            ax.plot(gr["r"], gr["g_BB"], "C1-", label="g_BB(r)", lw=1.5)
+            ax.plot(gr["r"], gr["g_AB"], "C2-", label="g_AB(r)", lw=1.5)
+            ax.axhline(1.0, color="gray", ls=":", alpha=0.5)
+            ax.axvline(1.0, color="black", ls=":", alpha=0.3, label="r₀")
+            ax.set_xlabel("r"); ax.set_ylabel("g(r)")
+            ax.set_title(f"{label}-time, t={gr['t']:.0f} τ")
+            ax.legend(fontsize=8, loc="upper right")
+            ax.grid(alpha=0.3); ax.set_xlim(0, 6)
+        _plt.tight_layout()
+        pair_png = run_dir / "extension_pair_correlation.png"
+        _plt.savefig(pair_png, dpi=140); _plt.close(fig)
+
+        # Figure 2: per-species KE + total momentum drift
+        fig, axs = _plt.subplots(1, 2, figsize=(13, 4.8))
+        mask = diag_t > 1
+        axs[0].loglog(diag_t[mask], ke_A[mask], "C0-o", lw=1.0, markersize=3,
+                       label="KE_A")
+        axs[0].loglog(diag_t[mask], ke_B[mask], "C1-s", lw=1.0, markersize=3,
+                       label="KE_B")
+        axs[0].loglog(diag_t[mask], (ke_A + ke_B)[mask], "k--", alpha=0.6,
+                       label="total KE")
+        axs[0].set_xlabel("t (τ)"); axs[0].set_ylabel("KE")
+        axs[0].set_title(f"{tag}: per-species kinetic energy")
+        axs[0].legend(fontsize=9); axs[0].grid(which="both", alpha=0.3)
+        p_total = _np.sqrt(px ** 2 + py ** 2)
+        axs[1].plot(diag_t, px, "C0-", lw=1.0, label="P_x")
+        axs[1].plot(diag_t, py, "C1-", lw=1.0, label="P_y")
+        axs[1].plot(diag_t, p_total, "k--", lw=1.0, alpha=0.6, label="|P| total")
+        axs[1].axhline(0, color="gray", ls=":", alpha=0.5)
+        axs[1].set_xlabel("t (τ)"); axs[1].set_ylabel("P (per particle)")
+        axs[1].set_title(f"{tag}: total momentum drift (non-reciprocal)")
+        axs[1].legend(fontsize=9); axs[1].grid(alpha=0.3)
+        _plt.tight_layout()
+        energy_png = run_dir / "extension_energy_momentum.png"
+        _plt.savefig(energy_png, dpi=140); _plt.close(fig)
+
+        def _peak(g):
+            return float(g[_np.argmax(g[5:50]) + 5])
+        summary = {
+            "tag": tag,
+            "g_late_AA_first_peak": _peak(gr_results["late"]["g_AA"]),
+            "g_late_BB_first_peak": _peak(gr_results["late"]["g_BB"]),
+            "g_late_AB_first_peak": _peak(gr_results["late"]["g_AB"]),
+            "ke_A_initial": float(ke_A[0]), "ke_A_final": float(ke_A[-1]),
+            "ke_B_initial": float(ke_B[0]), "ke_B_final": float(ke_B[-1]),
+            "ke_ratio_late": float(ke_A[-1] / max(ke_B[-1], 1e-30)),
+            "P_total_max": float(_np.max(p_total)),
+            "P_total_final": float(p_total[-1]),
+        }
+        summary_path = run_dir / "extension_summary.json"
+        summary_path.write_text(_json.dumps(summary, indent=2))
+        return summary
+
+    cls.pair_correlation = pair_correlation
+    cls.extension_diagnostics = extension_diagnostics
+    return cls
+
+
+PRXAnalyzer = _attach_extension(PRXAnalyzer)
+
+
 

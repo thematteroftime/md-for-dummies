@@ -28,7 +28,7 @@ thesis_chapter: §5
 | O2 | T_B(t) slope β | Eq.(10) §II.B | scalar | dlogT_B/dlogt → 2/3 | 10% | PRXAnalyzer.full_analysis |
 | O3 | T_A/T_B asymptote | Eq.(11) §II.B | scalar | τ_∞ ≈ 3.1 | 10% | PRXAnalyzer.full_analysis |
 | O4 | A-species velocity dist deviation from MB | Fig.1 lower | qualitative | high-v² tail below line | visual | scripts/build_velocity_dist.py |
-| O5* | total \|P\| ∝ √t | (paper-external; §6 thesis original) | scalar | random walk exponent ≈ 0.5 | ±20% | scripts/extension_analysis.py |
+| O5* | total \|P\| ∝ √t | (paper-external) | scalar | random walk exponent ≈ 0.5 | ±20% | `PRXAnalyzer.extension_diagnostics` |
 
 `*` O5 is original to this thesis (paper does not show momentum drift).
 

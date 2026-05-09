@@ -1,0 +1,96 @@
+{
+  "_comment": "Hartmann 2005 (PRE 72 026409) 2D Yukawa OCP — kappa=2 isotherm, sweep Gamma in {80,100,120,140,160}. PLACEHOLDER UNDER OPTION (a): emitted as ERPotential with MT=0 (Yukawa-only degenerate case) to satisfy current schema (force_type enum = {hertzian_nonreciprocal, er_plasma}). Real campaign launch is BLOCKED on §10b decisions in design doc, including option (a)-vs-(b) force-class path, units-regime extension, and ndim=2 schema plumbing. lambda_mm/T0_K/dt_ms are macro-units fields the schema demands for er_plasma; here they are RE-INTERPRETED as Yukawa-OCP reduced-unit quantities mapped through a stand-in scale, NOT as physical mm/ms/K. This config will PASS strict validation but will NOT physically reproduce Hartmann 2005 until the new force class lands.",
+  "_paper_ref": "Hartmann, Kalman, Donkó & Kutasi, Phys. Rev. E 72, 026409 (2005)",
+  "_design_doc": "docs/specs/2026-05-09-hartmann2005-design.md",
+  "_force_type_doc": "references/force_types.md §2 (er_plasma; reused with MT=0 as Yukawa-only — flagged §10b)",
+  "_units_doc": "macro (per er_plasma registry requirement); SEMANTICALLY reduced 2D-Yukawa-OCP units. Mismatch flagged §10b/Q2.",
+  "campaign": [
+    {
+      "force_type": "er_plasma",
+      "tag": "HK_kappa2_G080",
+      "MT": 0.0,
+      "Z_eff": 10000,
+      "lambda_mm": 0.05,
+      "N": 1000,
+      "T0_K": 1740.0,
+      "dt_ms": 0.01,
+      "steps": 100000,
+      "stride": 200,
+      "nu": 0.1,
+      "cho": 2,
+      "notes": "Gamma=80 (liquid). T0_K=1740 chosen so T_K/T_ref scales as 1/Gamma at fixed lambda_mm. PLACEHOLDER — see design doc §10b."
+    },
+    {
+      "force_type": "er_plasma",
+      "tag": "HK_kappa2_G100",
+      "MT": 0.0,
+      "Z_eff": 10000,
+      "lambda_mm": 0.05,
+      "N": 1000,
+      "T0_K": 1392.0,
+      "dt_ms": 0.01,
+      "steps": 100000,
+      "stride": 200,
+      "nu": 0.1,
+      "cho": 2,
+      "notes": "Gamma=100 (liquid, near melt). PLACEHOLDER — see design doc §10b."
+    },
+    {
+      "force_type": "er_plasma",
+      "tag": "HK_kappa2_G120",
+      "MT": 0.0,
+      "Z_eff": 10000,
+      "lambda_mm": 0.05,
+      "N": 1000,
+      "T0_K": 1160.0,
+      "dt_ms": 0.01,
+      "steps": 100000,
+      "stride": 200,
+      "nu": 0.1,
+      "cho": 2,
+      "notes": "Gamma=120 (transition probe). PLACEHOLDER — see design doc §10b."
+    },
+    {
+      "force_type": "er_plasma",
+      "tag": "HK_kappa2_G140",
+      "MT": 0.0,
+      "Z_eff": 10000,
+      "lambda_mm": 0.05,
+      "N": 1000,
+      "T0_K": 994.0,
+      "dt_ms": 0.01,
+      "steps": 100000,
+      "stride": 200,
+      "nu": 0.1,
+      "cho": 2,
+      "notes": "Gamma=140 (transition probe). PLACEHOLDER — see design doc §10b."
+    },
+    {
+      "force_type": "er_plasma",
+      "tag": "HK_kappa2_G160",
+      "MT": 0.0,
+      "Z_eff": 10000,
+      "lambda_mm": 0.05,
+      "N": 1000,
+      "T0_K": 870.0,
+      "dt_ms": 0.01,
+      "steps": 100000,
+      "stride": 200,
+      "nu": 0.1,
+      "cho": 2,
+      "notes": "Gamma=160 (solid). PLACEHOLDER — see design doc §10b."
+    }
+  ],
+  "pipeline": {
+    "preflight": true,
+    "smoke": true,
+    "smoke_steps": 100,
+    "production": true,
+    "analyze": false,
+    "halt_on_fail": true,
+    "max_parallel": 2
+  },
+  "aggregation": {
+    "enabled": false
+  }
+}
