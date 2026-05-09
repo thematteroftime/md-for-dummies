@@ -1,0 +1,79 @@
+{
+  "_comment": "Pedersen et al. PRL 120, 165501 (2018) — Kob-Andersen binary LJ smoke + small production. N=1000 (800 A + 200 B), ρ=1.2 isochore, T0 ∈ {0.7, 1.0, 1.3} bracketing the paper Tm=1.028(3). Engine has drag-only Langevin (no Wiener noise) and no NPT, so paper coexistence-line method is out of scope; we target qualitative partial RDF structure (g_AB peak < g_AA peak per σ_AB<σ_AA) and qualitative MSD trend at T=1.3 (liquid mobile).",
+  "_paper_ref": "Pedersen et al., Phys. Rev. Lett. 120, 165501 (2018)",
+  "_paper_pdf": "papers/pedersen_prl2018.pdf",
+  "_design_doc": "docs/specs/2026-05-10-pedersen-kalj-design.md",
+  "_force_type_doc": "references/force_types.md §3",
+  "_units_doc": "reduced_lj",
+  "campaign": [
+    {
+      "force_type": "kalj",
+      "tag": "kalj_T07",
+      "T0": 0.7,
+      "rho": 1.2,
+      "N": 1000,
+      "fraction_B": 0.20,
+      "nu": 0.1,
+      "dt": 0.005,
+      "steps": 100000,
+      "stride": 200,
+      "cho": 2,
+      "ndim": 3,
+      "units_regime": "reduced_lj",
+      "notes": "below paper Tm=1.028 — supercooled regime; expect glassy MSD"
+    },
+    {
+      "force_type": "kalj",
+      "tag": "kalj_T10",
+      "T0": 1.0,
+      "rho": 1.2,
+      "N": 1000,
+      "fraction_B": 0.20,
+      "nu": 0.1,
+      "dt": 0.005,
+      "steps": 100000,
+      "stride": 200,
+      "cho": 2,
+      "ndim": 3,
+      "units_regime": "reduced_lj",
+      "notes": "at paper Tm=1.028 — coexistence point in Fig.1"
+    },
+    {
+      "force_type": "kalj",
+      "tag": "kalj_T13",
+      "T0": 1.3,
+      "rho": 1.2,
+      "N": 1000,
+      "fraction_B": 0.20,
+      "nu": 0.1,
+      "dt": 0.005,
+      "steps": 100000,
+      "stride": 200,
+      "cho": 2,
+      "ndim": 3,
+      "units_regime": "reduced_lj",
+      "notes": "above paper Tm — equilibrium liquid; expect mobile MSD"
+    }
+  ],
+  "pipeline": {
+    "preflight": true,
+    "smoke": true,
+    "smoke_steps": 100,
+    "production": true,
+    "analyze": true,
+    "analyzer_class": "PedersenAnalyzer",
+    "halt_on_fail": true,
+    "max_parallel": 1,
+    "visualize": {
+      "enabled": true,
+      "class": "PedersenPlotter"
+    }
+  },
+  "aggregation": {
+    "enabled": true,
+    "class": "PedersenAggregator",
+    "output": "docs/pedersen_kalj_campaign_report.md",
+    "plots": ["rdf_overlay", "msd_overlay"],
+    "title": "Pedersen KA-LJ campaign — N=1000, ρ=1.2, T={0.7,1.0,1.3}"
+  }
+}

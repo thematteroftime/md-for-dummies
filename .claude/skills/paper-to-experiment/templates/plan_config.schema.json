@@ -16,6 +16,10 @@
       "type": "string",
       "description": "Paper citation, e.g. 'Ivlev PRL 2008' or 'Ivlev PRX 2015'"
     },
+    "_paper_pdf": {
+      "type": "string",
+      "description": "Path to papers/<slug>.pdf (SKILL.md Hard rule #2 says PDF must be on disk)"
+    },
     "_design_doc": {
       "type": "string",
       "description": "Path to docs/specs/YYYY-MM-DD-<topic>-design.md"
@@ -80,7 +84,7 @@
       "required": ["force_type", "tag", "steps", "stride"],
       "properties": {
         "force_type": {
-          "enum": ["hertzian_nonreciprocal", "er_plasma"],
+          "enum": ["hertzian_nonreciprocal", "er_plasma", "kalj"],
           "description": "Must match a registered force_type in references/force_types.md"
         },
         "tag": {
@@ -109,6 +113,9 @@
         "lambda_mm": { "type": "number", "minimum": 0.001, "maximum": 10 },
         "T0_K":   { "type": "number", "minimum": 1,    "maximum": 10000 },
         "dt_ms":  { "type": "number", "minimum": 0.0001, "maximum": 1   },
+        "rho":    { "type": "number", "minimum": 0.01, "maximum": 5.0  },
+        "fraction_B": { "type": "number", "minimum": 0.0, "maximum": 0.5 },
+        "dt":     { "type": "number", "minimum": 0.0001, "maximum": 1   },
         "N":      { "type": "integer", "minimum": 100, "maximum": 100000 },
         "cho":    { "enum": [1, 2] },
         "chunk_size": { "type": "integer", "minimum": 1, "maximum": 10000 },
@@ -133,6 +140,16 @@
             "properties": {
               "ndim":         { "const": 3 },
               "units_regime": { "const": "macro_dust" }
+            }
+          }
+        },
+        {
+          "if":   { "properties": { "force_type": { "const": "kalj" } } },
+          "then": {
+            "required": ["T0", "rho"],
+            "properties": {
+              "ndim":         { "const": 3 },
+              "units_regime": { "const": "reduced_lj" }
             }
           }
         }

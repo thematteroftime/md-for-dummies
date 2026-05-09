@@ -36,6 +36,7 @@ _REGISTRY: dict[str, str] = {
     "lennardJones":           "forces.lennard_jones:lennardJones",
     "ERPotential":            "forces.er_potential:ERPotential",
     "HertzianNonreciprocal":  "forces.hertzian_nonreciprocal:HertzianNonreciprocal",
+    "KobAndersenLJ":          "forces.kalj:KobAndersenLJ",
     # lattices (initial-condition generators)
     "square_2d":              "tools.lattices.square_2d:SquareLattice2D",
     "triangular_2d":          "tools.lattices.triangular_2d:TriangularLattice2D",
@@ -44,11 +45,14 @@ _REGISTRY: dict[str, str] = {
     # analyzers (per-run)
     "PRXAnalyzer":            "tools.analyzers.prx:PRXAnalyzer",
     "ERAnalyzer":             "tools.analyzers.er:ERAnalyzer",
+    "PedersenAnalyzer":       "tools.analyzers.pedersen:PedersenAnalyzer",
     # plotters (per-run figures)
     "PRXPlotter":             "tools.plotters.prx:PRXPlotter",
+    "PedersenPlotter":        "tools.plotters.pedersen:PedersenPlotter",
     # aggregators (cross-run; Phase 4 dispatcher resolves these)
     "PRXAggregator":          "tools.aggregators.prx:PRXAggregator",
     "ERAggregator":           "tools.aggregators.er:ERAggregator",
+    "PedersenAggregator":     "tools.aggregators.pedersen:PedersenAggregator",
     # visualizers (interactive / video)
     "TaichiTrajectoryViz":    "tools.visualizers.taichi_traj:TaichiTrajectoryViz",
     # runner

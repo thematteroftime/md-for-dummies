@@ -26,6 +26,7 @@ from forces.base import forceField
 from forces.lennard_jones import lennardJones
 from forces.er_potential import ERPotential
 from forces.hertzian_nonreciprocal import HertzianNonreciprocal
+from forces.kalj import KobAndersenLJ
 
 
 # Maps the `force_type` string used in configs/plan_*.json to the class.
@@ -35,6 +36,7 @@ FORCE_REGISTRY: dict[str, type] = {
     "lennard_jones":           lennardJones,
     "er_plasma":               ERPotential,
     "hertzian_nonreciprocal":  HertzianNonreciprocal,
+    "kalj":                    KobAndersenLJ,
 }
 
 
@@ -43,5 +45,6 @@ __all__ = [
     "lennardJones",
     "ERPotential",
     "HertzianNonreciprocal",
+    "KobAndersenLJ",
     "FORCE_REGISTRY",
 ]

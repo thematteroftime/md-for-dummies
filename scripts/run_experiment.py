@@ -36,6 +36,7 @@ from toolClass import (PRXAnalyzer, PRXPlotter, PriorRunsDB,
 PYTHON = sys.executable
 MD_SCRIPT_PRX = _ROOT / "prx_nonreciprocal_run.py"          # PRX 2015 Hertzian non-reciprocal
 MD_SCRIPT_ER  = _ROOT / "er_plasma_run.py"                  # PRL 2008 anisotropic Yukawa
+MD_SCRIPT_KALJ = _ROOT / "pedersen_kalj_run.py"             # PRL 2018 Pedersen KA-LJ
 # Backward compat alias used by older paths
 MD_SCRIPT = MD_SCRIPT_PRX
 OUT_ROOT = _ROOT / "outputFiles"
@@ -92,13 +93,23 @@ EXP_DEFAULTS_BY_TYPE = {
         "dt_ms": 0.01,
         "cho": 2,
     },
+    "kalj": {
+        "N": 1000,
+        "stride": 200,
+        "nu": 0.1,
+        "dt": 0.005,
+        "rho": 1.2,
+        "fraction_B": 0.20,
+        "cho": 2,
+    },
 }
 # Legacy alias kept so callers that import EXP_DEFAULTS continue to work.
 # Resolves to the PRX defaults (most common historic case).
 EXP_DEFAULTS = {**EXP_DEFAULTS_COMMON, **EXP_DEFAULTS_BY_TYPE["hertzian_nonreciprocal"]}
 
-EXP_REQUIRED_PRX = ("tag", "phi", "T0", "steps")
-EXP_REQUIRED_ER  = ("tag", "MT", "steps")
+EXP_REQUIRED_PRX  = ("tag", "phi", "T0", "steps")
+EXP_REQUIRED_ER   = ("tag", "MT", "steps")
+EXP_REQUIRED_KALJ = ("tag", "T0", "rho", "steps")
 EXP_REQUIRED = EXP_REQUIRED_PRX  # legacy alias used by callers that don't dispatch
 
 
@@ -140,8 +151,12 @@ def _normalize_config(cfg):
         type_defaults = EXP_DEFAULTS_BY_TYPE.get(force_type, {})
         merged = {**EXP_DEFAULTS_COMMON, **type_defaults, **exp}
         # Required fields depend on force_type
-        required = (EXP_REQUIRED_ER if force_type == "er_plasma"
-                     else EXP_REQUIRED_PRX)
+        if force_type == "er_plasma":
+            required = EXP_REQUIRED_ER
+        elif force_type == "kalj":
+            required = EXP_REQUIRED_KALJ
+        else:
+            required = EXP_REQUIRED_PRX
         for key in required:
             if key not in merged or merged[key] is None:
                 raise ValueError(
@@ -401,6 +416,19 @@ def _invoke_md(exp):
         for ck, ek in [("Z_eff", "--Z-eff"), ("lambda_mm", "--lambda-mm"),
                         ("T0_K", "--T0-K"), ("dt_ms", "--dt-ms"),
                         ("nu", "--nu"), ("N", "--N"), ("cho", "--cho")]:
+            if ck in exp and exp[ck] is not None:
+                cmd.extend([ek, str(exp[ck])])
+    elif force_type == "kalj":
+        cmd = [
+            PYTHON, str(MD_SCRIPT_KALJ),
+            "--tag", str(exp["tag"]),
+            "--T0", str(exp["T0"]),
+            "--rho", str(exp["rho"]),
+            "--steps", str(exp["steps"]),
+            "--stride", str(exp["stride"]),
+        ]
+        for ck, ek in [("nu", "--nu"), ("N", "--N"),
+                        ("fraction_B", "--fraction-B"), ("cho", "--cho")]:
             if ck in exp and exp[ck] is not None:
                 cmd.extend([ek, str(exp[ck])])
     else:

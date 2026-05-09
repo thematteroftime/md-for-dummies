@@ -153,6 +153,33 @@ def check_force_type_specific(cfg, res: Result):
                 res.note(f"[{tag}] cho=1 (cell-list) at small N={N} — O(N²) mode (cho=2) is faster "
                           f"below N={threshold} (configurable via _cell_list_threshold_N)")
 
+        elif ft == "kalj":
+            T0 = exp.get("T0", 0)
+            rho = exp.get("rho", 1.2)
+            N = exp.get("N", 1000)
+            steps = exp.get("steps", 0)
+            fB = exp.get("fraction_B", 0.20)
+
+            if T0 < 0.3:
+                res.warn(
+                    f"[{tag}] T0={T0} is deep glassy regime (T_m≈1.028 at ρ=1.2). "
+                    f"Engine drag-only Langevin will undercool; expect MSD plateau."
+                )
+            if rho < 0.8 or rho > 1.5:
+                res.warn(
+                    f"[{tag}] ρ={rho} outside KA paper isochore range (paper Fig.4 covers 0.93–1.44). "
+                    f"Verify this is intentional."
+                )
+            if not (0.0 < fB < 0.5):
+                res.err(
+                    f"[{tag}] fraction_B={fB} out of range (0, 0.5). "
+                    f"KA paper studies up to 50% B."
+                )
+            threshold = cfg.get("_cell_list_threshold_N", DEFAULT_CELL_LIST_THRESHOLD_N)
+            if exp.get("cho", 2) == 1 and N < threshold:
+                res.note(f"[{tag}] cho=1 (cell-list) at small N={N} — O(N²) mode (cho=2) is "
+                          f"faster below N={threshold}")
+
         else:
             res.err(f"[{tag}] unknown force_type '{ft}' — see references/force_types.md")
 
@@ -191,6 +218,7 @@ _STEP_RATE_MULTIPLIER = {
     # Calibrate against a real run by reading manifest.json:wall_seconds.
     "hertzian_nonreciprocal": 1.0,    # baseline (the anchor below was measured against PRX)
     "er_plasma":              1.0,    # anisotropic Yukawa, similar cost
+    "kalj":                   1.0,    # binary LJ truncated, similar cost to PRX baseline
     # New force_types may add their own factor here. Defaults to 1.0 (PRX
     # baseline) when missing — over-estimate is safer than under-estimate.
 }
@@ -225,8 +253,12 @@ def estimate_costs(cfg, res: Result):
     per_run_walls = []
     max_N_total = 0
     for exp in cfg.get("campaign", []):
-        N_per = exp.get("N", 10000 if exp.get("force_type") == "hertzian_nonreciprocal" else 1000)
-        N_tot = 2 * N_per if exp.get("force_type") == "hertzian_nonreciprocal" else N_per
+        ft = exp.get("force_type")
+        # N convention is force-type-specific:
+        #   hertzian_nonreciprocal → N is per-species (total = 2N)
+        #   er_plasma, kalj         → N is total
+        N_per = exp.get("N", 10000 if ft == "hertzian_nonreciprocal" else 1000)
+        N_tot = 2 * N_per if ft == "hertzian_nonreciprocal" else N_per
         max_N_total = max(max_N_total, N_tot)
         threshold = cfg.get("_cell_list_threshold_N", DEFAULT_CELL_LIST_THRESHOLD_N)
         cho = exp.get("cho", 1 if N_tot > threshold else 2)

@@ -12,6 +12,7 @@ Per-force-type conventions that are easy to mix up. **Read this before writing t
 |------------|-----------|-----------|------|--------------|
 | `hertzian_nonreciprocal` | **per-species** count (total = 2N — see §1) | from-file lattice | 3 | `reduced_lj` |
 | `er_plasma` | total particle count | from-file lattice (`xyz_1000_3.in`) | 3 | `macro_dust` |
+| `kalj`     | total particle count (split 80/20 A/B internally) | `simple_cubic_3d` from `tools/lattices/` | 3 | `reduced_lj` |
 
 The `N` convention column is the most common footgun — `hertzian_nonreciprocal` is the only force_type where `N` is per-species. Future binary mixtures should document N as **total** unless there's a strong reason otherwise.
 
@@ -129,7 +130,68 @@ The `N` convention column is the most common footgun — `hertzian_nonreciprocal
 
 ---
 
-## 3. Engine integration notes (read before adding a new force type)
+## 3. `kalj`  (PRL 2018, Kob-Andersen binary LJ)
+
+- **paper**: Pedersen, Schroder, Dyre, *Phys. Rev. Lett.* 120, 165501 (2018)
+- **entry script**: `pedersen_kalj_run.py`
+- **force class**: `forces.kalj:KobAndersenLJ`
+- **analyzer**: `tools.analyzers.pedersen:PedersenAnalyzer` (partial RDFs g_AA / g_AB / g_BB + MSD)
+- **plotter**:  `tools.plotters.pedersen:PedersenPlotter`
+- **aggregator**: `tools.aggregators.pedersen:PedersenAggregator`
+- **compat**: `ndim=3`, `units_regime=reduced_lj`
+- **IC**: `simple_cubic_3d` lattice + random A/B species labels (deterministic seed)
+- **integrator**: BAOAB (drag-only Langevin — engine has no Wiener noise yet)
+
+### Required fields per experiment
+
+| field | type | range | meaning |
+|-------|------|-------|---------|
+| `tag` | str | `[A-Za-z0-9_]{2,32}` | unique run id |
+| `T0` | float | (0.05, 5.0] | initial temperature (reduced LJ units) |
+| `rho` | float | (0.01, 5.0] | number density (paper Fig.4 covers 0.93–1.44) |
+| `steps` | int | [100, 5e7] | total integration steps |
+| `stride` | int | [1, 1e5] | frames between HDF5 writes |
+
+### Optional fields
+
+| field | type | default | meaning |
+|-------|------|---------|---------|
+| `nu` | float | 0.1 | Langevin damping (1/τ); drag-only, no Wiener noise (engine limitation) |
+| `N` | int | 1000 | total particle count; split into round(fraction_B·N) B and (N − N_B) A |
+| `dt` | float | 0.005 | LJ-reduced timestep |
+| `fraction_B` | float | 0.20 | B-species fraction (paper KA standard 80:20) |
+| `cho` | enum {1,2} | 2 | 1 = cell-list, 2 = O(N²) (use 2 for N<3000) |
+
+### Critical pre-flight rules
+
+- **Cutoff**: paper-defined truncate-and-shift at `2.5·σ_pq` per pair. Adapter sets `cutoff = 2.5·σ_AA = 2.5` (the largest). `cutoffNegh ≈ 1.15·cutoff`.
+- **Engine limitations** (documented in design doc §11):
+  - No NPT — paper's coexistence-line method (Fig.1, §III) is NOT reproducible. Use NVT-Langevin at fixed ρ and target qualitative observables (RDF structure, MSD trend).
+  - BAOAB has drag, no Wiener noise. MSD plateaus at low T are an *engine* artifact, not physics. Report dynamics as qualitative only.
+- **Lattice**: simple-cubic IC will be far from KA equilibrium (FCC for pure-A); short equilibration is built-in via Langevin damping but RDF measurement should use the LATE third of the trajectory, not the early frames.
+
+### Example
+
+```json
+{
+  "force_type": "kalj",
+  "tag": "T10_rho12",
+  "T0": 1.0,
+  "rho": 1.2,
+  "N": 1000,
+  "fraction_B": 0.20,
+  "steps": 100000,
+  "stride": 200,
+  "nu": 0.1,
+  "cho": 2,
+  "ndim": 3,
+  "units_regime": "reduced_lj"
+}
+```
+
+---
+
+## 4. Engine integration notes (read before adding a new force type)
 
 These platform behaviours are non-obvious and have caught autonomous extension agents. Worth reading once.
 
@@ -176,7 +238,7 @@ Any new force class subclassing `forceField` whose potential diverges at the ori
 
 ---
 
-## 4. Adding a new force type
+## 5. Adding a new force type
 
 When a new paper requires a force class not listed above, walk these **8 steps** in order. **A reproduction that stops at step 6 has only proved the engine wires up — no `report.md`, no plots.** By SKILL.md Hard rule #9, that is incomplete. Flag the entire chain in design doc §2a as a status checklist.
 
@@ -233,7 +295,7 @@ There is a tempting third option to "reuse" vs "extend": pick an existing force 
 
 ---
 
-## 5. Legacy configs (pre-`force_type`)
+## 6. Legacy configs (pre-`force_type`)
 
 Configs written before the `force_type` field was introduced (e.g., `plan_e_damping.json`, several Plan B/C configs) will fail strict validation because their experiments lack `force_type`. They were all `hertzian_nonreciprocal` by default — that was the only force the framework supported at the time.
 
@@ -243,7 +305,7 @@ Skill MUST NOT auto-rewrite legacy configs. If user is migrating, flag it explic
 
 ---
 
-## 6. Cross-reference
+## 7. Cross-reference
 
 - **Schema**: `templates/plan_config.schema.json`
 - **Skill main**: `SKILL.md`
