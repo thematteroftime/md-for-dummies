@@ -1,0 +1,64 @@
+{
+  "_comment": "Plan G3 — fill in MT∈{0.4, 0.6, 0.9} at 100k steps to complete the Q-vs-MT phase-transition curve. Plan G (50k) had these MTs but was too short; Plan G2 (100k) only had MT={0,0.8,1.0}. Combined G2+G3 gives 6 long-time MTs ready for Ch 4 phase diagram.",
+  "_force_type_doc": "ERPotential (anisotropic Yukawa)",
+  "_units_doc": "macro (mm, ms, K)",
+  "campaign": [
+    {
+      "force_type": "er_plasma",
+      "tag": "ER2L_MT04",
+      "MT": 0.4,
+      "Z_eff": 10000,
+      "lambda_mm": 0.05,
+      "N": 1000,
+      "T0_K": 348,
+      "dt_ms": 0.01,
+      "steps": 100000,
+      "stride": 200,
+      "nu": 0.1,
+      "cho": 2,
+      "notes": "Plan G3 1/3 — weak anisotropy, expect mild chain tendency"
+    },
+    {
+      "force_type": "er_plasma",
+      "tag": "ER3L_MT06",
+      "MT": 0.6,
+      "Z_eff": 10000,
+      "lambda_mm": 0.05,
+      "N": 1000,
+      "T0_K": 348,
+      "dt_ms": 0.01,
+      "steps": 100000,
+      "stride": 200,
+      "nu": 0.1,
+      "cho": 2,
+      "notes": "Plan G3 2/3 — moderate, expect partial chain formation"
+    },
+    {
+      "force_type": "er_plasma",
+      "tag": "ER6L_MT09",
+      "MT": 0.9,
+      "Z_eff": 10000,
+      "lambda_mm": 0.05,
+      "N": 1000,
+      "T0_K": 348,
+      "dt_ms": 0.01,
+      "steps": 100000,
+      "stride": 200,
+      "nu": 0.1,
+      "cho": 2,
+      "notes": "Plan G3 3/3 — between best (0.8) and sonic (1.0) — chain or onset of cluster?"
+    }
+  ],
+  "pipeline": {
+    "preflight": true,
+    "smoke": false,
+    "smoke_steps": 0,
+    "production": true,
+    "analyze": false,
+    "halt_on_fail": true,
+    "max_parallel": 2
+  },
+  "aggregation": {
+    "enabled": false
+  }
+}

@@ -127,15 +127,28 @@ pip install -r requirements.txt
 
 > **GPU note**: this project uses Taichi 1.7.4 with CUDA. CPU-only Taichi works for the smoke tests but is slow for production-scale runs. Tested on RTX 5060 Laptop (8 GB VRAM).
 
-### Reproduce one of the included papers
+### Validate an example config (no compute)
+
+Every config goes through three pre-launch gates before any GPU is touched. Try them:
 
 ```bash
-# PRX 2015: non-reciprocal Hertzian, two-temperature steady state
-python scripts/validate_config.py configs/examples/plan_e_damping.json --strict
-python scripts/run_experiment.py     configs/examples/plan_e_damping.json
+# Schema + physics + budget validation. Exits 0 = ready to launch.
+python scripts/validate_config.py configs/examples/plan_g_er_chains.json --strict
 ```
 
-Outputs go to `outputFiles/<TS>_<tag>/` (per-run subdir with HDF5 trajectory + manifest.json + report.md). Cross-run figures land in `docs/images/` once Phase 4 (aggregate) finishes.
+The validator prints a cost estimate (per-run wall + total VRAM). Re-run with `--strict` to fail on warnings.
+
+### Run a small example
+
+The PRL 2008 short ER plasma campaign (5 runs × 50k steps ≈ 20 min on RTX 5060):
+
+```bash
+python scripts/run_experiment.py configs/examples/plan_g_er_chains.json
+```
+
+Outputs go to `outputFiles/<TS>_<tag>/` per run (HDF5 trajectory + manifest.json + per-run report.md). Cross-run figures land in `docs/images/` once Phase 4 (aggregate) runs.
+
+> **Heavier examples** (multi-hour, e.g. `plan_e_damping.json`, `plan_g2_er_long.json`) are listed in `configs/examples/` for reference. Validate them first; launch only when you've budgeted the wall time.
 
 ### Run the test suite
 
@@ -144,6 +157,17 @@ pytest tests/ -q
 ```
 
 This exercises the schema, registry, validators, and contract conformance in seconds.
+
+### Standalone utilities
+
+Three CLI helpers under `scripts/` that don't fit in the main pipeline:
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/bench_neighbor.py` | Benchmark cell-list (`cho=1`) vs O(N²) (`cho=2`) at several N — picks the right `cho` for your hardware. |
+| `scripts/compute_delta_eff.py` | Numerically integrate the PRX 2015 `Δ_eff` and `ε` fingerprints from the force kernel — sanity-check before launching a Hertzian non-reciprocal campaign. |
+| `scripts/two_particle_calibration.py` | Two-particle controlled-collision test for the Hertzian non-reciprocal force — verifies single-pair energy injection against paper Eq. (5). |
+| `scripts/visualize_er_h5.py` | Real-time Taichi-UI animation of any HDF5 trajectory; also wrapped as `TaichiTrajectoryViz` in `tools/visualizers/` for config-driven dispatch. |
 
 ---
 
