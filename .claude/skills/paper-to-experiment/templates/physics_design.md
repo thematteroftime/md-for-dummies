@@ -44,7 +44,24 @@ Add as many rows as needed. If observable is **derived** (not directly in paper)
 
 ### §2a New force class  *(fill only if new_class_required=true; else delete)*
 
-- **rationale**: `<why existing classes don't fit>`
+The skill CANNOT ship a strict-validating config until at least Step 5 is merged into the framework — that work is OUT OF SCOPE for the skill itself. Use this checklist to surface what blocks the campaign:
+
+**6-step extension status** (mirrors `references/force_types.md §3`):
+
+| Step | Action | Files touched | Status |
+|------|--------|---------------|--------|
+| 1 | Add `<NewClass>` to `forceFieldClass.py` (`requires_full_list`, `@ti.kernel updateAllF`) | `forceFieldClass.py` | ☐ todo / ☐ in PR / ☐ merged |
+| 2 | Tests for the new class (analytic 2-particle, symmetry, cutoff) | `tests/test_<class>_<N>cases.py` | ☐ |
+| 3 | Entry script `<topic>_run.py` (mirror existing adapters) | `<topic>_run.py` | ☐ |
+| 4 | Dispatch wiring in `_invoke_md` + `EXP_REQUIRED_<TYPE>` | `scripts/run_experiment.py` | ☐ |
+| 5 | Schema update: add to `force_type` enum + new if/then with `ndim` and `units_regime` constants | `templates/plan_config.schema.json` | ☐ |
+| 6 | Registry section: paper ref, compat, fields, pre-flight rules | `references/force_types.md` | ☐ |
+
+**The skill MUST NOT mark this design "approved" while any step is `☐ todo`.** If the user wants a placeholder config to draft analysis pipelines against, mark that explicitly in `_comment` and use a degenerate-parameter reuse from an existing class — but flag the deviation in §10b as `ASK USER:` per anti-pattern in `SKILL.md`.
+
+**Sub-fields**:
+
+- **rationale**: `<why existing classes don't fit; why degenerate reuse is unsuitable>`
 - **python_skeleton** (10–30 lines, key kernel only):
   ```python
   @ti.data_oriented
@@ -56,10 +73,11 @@ Add as many rows as needed. If observable is **derived** (not directly in paper)
           # implement paper Eq.(<N>) here
           ...
   ```
-- **test_plan**: `tests/test_<class>_<N>cases.py` covering at minimum:
+- **test_plan**: `tests/test_<class>_<N>cases.py` covering:
   - 2-particle force magnitude vs analytic prediction
   - F_ij + F_ji symmetry (or asymmetry, if non-reciprocal)
   - Boundary cases (r→0, r→cutoff)
+- **compat declaration**: `ndim=[<2|3|both>]`, `units_regime=<reduced_lj|macro_dust|reduced_yukawa|new>`
 - **analytical_fingerprints**: `<dimensionless numbers from paper appendix that we can compute and verify before running, e.g. Δ_eff=0.57, ε=0.082>`
 
 ---

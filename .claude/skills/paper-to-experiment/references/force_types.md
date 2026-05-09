@@ -12,7 +12,7 @@ When adding a new force type, follow §3 below — registry is the gatekeeper, s
 - **entry script**: `prx_nonreciprocal_run.py`
 - **force class**: `forceFieldClass.HertzianNonreciprocal`
 - **analyzer**: `toolClass.PRXAnalyzer` (in-process via `PRXAnalyzer.full_analysis`)
-- **units**: reduced (σ, ε, m=1, k_B=1)
+- **compat**: `ndim=3`, `units_regime=reduced_lj`
 - **box**: derived from N and φ
 - **integrator**: BAOAB (NVE if ν=0, Langevin else)
 
@@ -64,10 +64,10 @@ When adding a new force type, follow §3 below — registry is the gatekeeper, s
 - **paper**: Ivlev et al. *Phys. Rev. Lett.* 100, 095003 (2008)
 - **entry script**: `er_plasma_run.py`
 - **force class**: `forceFieldClass.ERPotential` (anisotropic Yukawa, Eq. (1))
-- **analyzers**: `scripts/analyze_er_chain.py` (Plan G short), `scripts/analyze_er_long.py` (Plan G2/G3 long), `scripts/analyze_chain_length.py` (chain stats)
-- **units**: macro (mm, ms, K) — REQUIRED, do not switch to reduced
+- **analyzers**: `scripts/analyze_er.py` (CLI, accepts `--runs` glob), `tools.analyzers.er.ERAnalyzer` (registry-callable wrapper)
+- **compat**: `ndim=3`, `units_regime=macro_dust` — required, ERPotential hard-codes 3D and the macro mm/ms/K scale
 - **integrator**: BAOAB with Langevin damping (default `nu=0.1 /ms`)
-- **lattice**: `dataFiles/xyz_1000_3.in` (10×10×10 lattice, copied per-tag)
+- **lattice**: 1000-atom 10×10×10 lattice file expected at `dataFiles/<lattice>.xyz`
 
 ### Required fields per experiment
 
@@ -120,7 +120,7 @@ When adding a new force type, follow §3 below — registry is the gatekeeper, s
 
 ## 3. Adding a new force type
 
-When a new paper requires a force class not listed above, the skill MUST guide the user through these 6 steps in order. **Do not skip any step.**
+When a new paper requires a force class not listed above, walk through these 6 steps in order. **The skill cannot ship a strict-validating config until at least Step 5 is merged**, so flag the entire chain in design doc §2a as a status checklist.
 
 1. **Force class implementation**
    - Add `<NewClass>` to `forceFieldClass.py` with `requires_full_list` attribute and `@ti.kernel updateAllF`.
@@ -141,12 +141,19 @@ When a new paper requires a force class not listed above, the skill MUST guide t
 5. **Schema update**
    - Edit `templates/plan_config.schema.json`:
      - Add new value to `force_type` enum.
-     - Add new `if/then` block in `allOf` mapping force_type → required-fields list.
+     - Add new `if/then` block in `allOf` mapping force_type → required-fields + `ndim` + `units_regime` constants.
+     - If a brand-new units regime is needed, also extend the top-level `units_regime` enum.
 
 6. **Registry update**
-   - Add a new section here (`## N. <new_type>`) with paper ref, fields, examples, pre-flight rules.
+   - Add a new section here (`## N. <new_type>`) with paper ref, fields, **compat block** (`ndim=...`, `units_regime=...`), examples, pre-flight rules.
 
 After all 6 steps, the new force_type is usable in `configs/*.json` and the skill will recognize it.
+
+### Anti-pattern: reuse-with-degenerate-parameter
+
+There is a tempting third option to "reuse" vs "extend": pick an existing force class that algebraically reduces to the target physics under a parameter setting (e.g. `ERPotential` with `MT=0` is mathematically a pure isotropic Yukawa). This produces a strict-validating config in 5 minutes WITHOUT going through Steps 1-6.
+
+**Do not do this for thesis-quality reproductions.** The manifest will lie about which physics ran (`force_class=ERPotential` instead of `YukawaIsotropic`), the dead anisotropy machinery is allocated and integrated even though it contributes zero, and downstream analyzers may misinterpret the data because they were written for the more general class. Surface this trade-off in design doc §10b as an `ASK USER:` decision, with the recommendation that thesis or published work should go through the full 6 steps.
 
 ---
 

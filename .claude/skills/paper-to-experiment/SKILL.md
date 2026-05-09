@@ -159,6 +159,7 @@ DO NOT launch the campaign yourself unless explicitly asked. The user owns the G
 | "I'll fix the warnings later" | Validator must be green BEFORE handoff. |
 | "Let me launch a quick test of the campaign" | User owns launch. Skill never auto-runs production. |
 | "8 sweep dimensions, 64 runs, easy" | Hard cap 12 runs per plan; split if more needed. |
+| "ERPotential with MT=0 is just Yukawa, reuse it." | The manifest will lie about what ran. Dead anisotropy machinery still allocated. Thesis reproductions need clean force classes — flag as §10b decision and prefer the 6-step extension over degenerate reuse. |
 
 ---
 
